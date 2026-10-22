@@ -1,45 +1,52 @@
 # Realme ice / DerpFest Android 17 build notes
 
-## Target and source
+## Target
 
 - Device codename: `ice`
-- Model declared by the current device tree: Realme RMX3461
-- Working integration branch in this repository: `ice-17`
-- Device-source branches currently referenced by the local manifest: `seventeen`
-- ROM manifest: `https://github.com/DerpFest-AOSP/android_manifest`, branch `17`
-- Manifest base revision declares Android `17.0.0_r1` and a LineageOS `lineage-24.0` default revision.
+- Model declared by this device tree: Realme RMX3461
+- Working branch in this repository: `ice-17`
+- Device-source branches: `seventeen`
+- ROM manifest: [DerpFest-AOSP/android_manifest, branch 17](https://github.com/DerpFest-AOSP/android_manifest/tree/17)
+- DerpFest vendor repository: [DerpFest-AOSP/android_vendor_derpfest, branch 17](https://github.com/DerpFest-AOSP/android_vendor_derpfest/tree/17)
 
-**Do not flash this build to a OnePlus 15R.** The tree identifies Realme RMX3461 and is not a OnePlus 15R device tree.
+**Do not flash this build to a OnePlus 15R or any other model.** This device tree identifies Realme RMX3461 and has not been hardware-tested as part of this work.
 
-## Local manifest
+## Changes on `ice-17`
 
-Copy `build/local_manifests/ice.xml` to `.repo/local_manifests/ice.xml` after initializing the DerpFest manifest and before `repo sync`.
+- Added `build/local_manifests/ice.xml` for the five existing device, vendor, common, hardware, and kernel repositories.
+- Added an initial `derp_ice.mk` product definition using the DerpFest Android 17 vendor configuration path.
+- Updated `AndroidProducts.mk` to expose `derp_ice-user`, `derp_ice-userdebug`, and `derp_ice-eng`.
+- Added a GitHub Actions preflight to check source branches, local-manifest XML, and product metadata.
 
-It maps the five existing device repositories to the paths expected by the device tree:
-- `device/realme/ice`
-- `vendor/realme/ice`
-- `device/oneplus/sm8350-common`
-- `hardware/oplus`
-- `kernel/oneplus/sm8350`
+The product makefile is an **initial port, not a compile-tested configuration**.
 
-## Current blockers before a safe ROM build
+## Remaining blockers
 
-This branch is not yet build-ready. The following are intentionally **not** changed automatically:
+1. `device.mk` still includes `overlay-yaap`. Its resources need review for YAAP-specific assumptions and Android 17 compatibility before deciding whether to retain, adapt, or remove them.
+2. Confirm the device and SM8350 common trees are compatible with the exact DerpFest Android 17 manifest revisions.
+3. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF, partition sizes, kernel configuration, module loading, and SELinux policy.
+4. Check all product references and generated build targets after the source tree is synced.
+5. No boot, recovery, OTA, or ROM image has been compiled or tested on hardware.
 
-1. `AndroidProducts.mk` still advertises `yaap_ice`, and `yaap_ice.mk` inherits YAAP configuration. DerpFest product configuration must be ported and verified against the Android 17 DerpFest vendor tree.
-2. `device.mk` includes `overlay-yaap`; inspect/replace YAAP-specific overlay resources and packages for compatibility with DerpFest.
-3. `BoardConfig.mk` includes the SM8350 common tree and a kernel config. Confirm the common tree, kernel source, vendor blobs, VINTF, SELinux policy, and partition definitions are compatible with the exact Android 17 source revision.
-4. The source branch name `seventeen` is only a branch label. Existence checks do not prove that every repository actually compiles against Android 17.
-5. No boot, recovery, or ROM image has been built or tested on hardware.
+## Source setup (on a suitably provisioned build runner)
 
-## Build capacity
+This project does not require a personal PC if you have access to a cloud runner with enough storage. A standard GitHub-hosted runner generally does **not** have enough free disk for a complete Android checkout and build; this repository's preflight does not attempt the full build.
 
-A complete Android ROM source checkout plus output commonly needs hundreds of GB of disk space and substantial RAM/CPU. Standard GitHub-hosted runners do not provide enough persistent/free disk for a normal full Android source build. This repository therefore does not launch a speculative full build on every push. Use a GitHub-hosted larger runner only if the account/org has one available with adequate disk, or another explicitly provisioned runner. Do not add cloud credentials or secrets to the workflow just to bypass runner limits.
+On a runner with several hundred GB of available disk and sufficient RAM/CPU:
 
-## Next validation sequence
+```bash
+repo init -u https://github.com/DerpFest-AOSP/android_manifest.git -b 17
+mkdir -p .repo/local_manifests
+cp device/realme/ice/build/local_manifests/ice.xml .repo/local_manifests/ice.xml
+repo sync -c -j2
+```
 
-1. Run the `Ice 17 ROM Preflight` workflow.
-2. Confirm all five source refs and the DerpFest manifest branch are found.
-3. Port the product makefile and remove/replace YAAP-only overlays and package references.
-4. Add a build job only after a runner with sufficient storage is available; build the exact lunch target and archive images/logs.
-5. Review build logs and verify device-specific boot/recovery images before any installation. Never flash an untested image.
+The copy path above assumes the local manifest is copied into the checkout after the device tree is already available. For a clean checkout, download this repository's `build/local_manifests/ice.xml` into `.repo/local_manifests/ice.xml` before running `repo sync`.
+
+After sync, verify that the repo manifest resolves every project and that `derp_ice-userdebug` is listed by the build environment. Do not assume a successful sync proves buildability. Run the build only after auditing the YAAP overlays and device-specific compatibility issues.
+
+## Build capacity and safety
+
+A full Android source checkout and output commonly consume hundreds of GB. Ordinary GitHub-hosted runners are typically too small; larger hosted runners depend on account/org availability and configuration. Do not add access tokens, cloud credentials, or signing keys to the repository to work around resource limits.
+
+Any generated image must be verified against the exact RMX3461 device, partition layout, bootloader state, and install procedure. Do not flash untested images.
