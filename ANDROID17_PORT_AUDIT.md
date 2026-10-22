@@ -21,12 +21,13 @@ This is a **kernel config consistency check**, not evidence that the Lahaina com
 
 ## Other findings requiring work before a real build
 
-1. **YAAP overlay reference remains active.** `device.mk` adds `$(LOCAL_PATH)/overlay-yaap` to `DEVICE_PACKAGE_OVERLAYS`. The folder name alone does not prove its resources are YAAP-specific; inspect the resources and migrate/rename only after reviewing them. Do not delete it blindly.
+1. **Overlay inspection:** the `overlay-yaap` folder contains three resource overlays: SystemUI burn-in protection, Settings face-enrollment configuration, and Aperture auxiliary-camera/video configurations. These resources look like device configuration rather than obviously YAAP-only product code. Keep them for now; validate the resource names and behavior against DerpFest Android 17 before renaming or changing paths.
 2. **Android 17 compatibility is unproven.** Branch names do not prove Soong, SELinux, VINTF, HAL, kernel, or vendor compatibility.
 3. **VINTF and HAL compatibility are not fully verified.** Check device and ODM manifests, framework compatibility matrices, vendor HAL versions, init rc files, and SELinux policy against the DerpFest 17 base.
-4. **Proprietary dependencies need a full file audit.** Confirm every referenced proprietary file exists, every copied destination is valid, and all required firmware/modules are available.
-5. **Product identity needs device-side validation.** `derp_ice.mk` sets product/device/brand/model and GMS client ID, but the model and release identity must be checked against a verified stock build for this exact device.
-6. **Duplicate copy entry.** `device.mk` lists `media/media_profiles_vendor.xml` twice at the same destination. Review and remove only if confirmed redundant.
+4. **Proprietary source paths:** a static comparison of `ice-vendor.mk` against the proprietary vendor repository tree found all 617 unique `PRODUCT_COPY_FILES` source paths in the manifest. This confirms source-path presence in Git, not that every destination is correct or that blobs work on Android 17.
+5. **Device-local paths:** the audio XMLs, media profiles, display config XML, and `init.oplus_ice.rc` referenced in `device.mk` exist in the device tree.
+6. **Product identity needs device-side validation.** `derp_ice.mk` sets product/device/brand/model and GMS client ID, but the model and release identity must be checked against a verified stock build for this exact device.
+7. **Duplicate copy entry.** `device.mk` lists `media/media_profiles_vendor.xml` twice at the same destination. It appears redundant; remove one copy entry only after preserving the existing source/destination mapping.
 
 ## Next safe engineering milestone
 
