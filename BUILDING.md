@@ -37,11 +37,11 @@ On a runner with several hundred GB of available disk and sufficient RAM/CPU:
 ```bash
 repo init -u https://github.com/DerpFest-AOSP/android_manifest.git -b 17
 mkdir -p .repo/local_manifests
-cp device/realme/ice/build/local_manifests/ice.xml .repo/local_manifests/ice.xml
+curl -fL https://raw.githubusercontent.com/nightx24/android_device_realme_ice/ice-17/build/local_manifests/ice.xml -o .repo/local_manifests/ice.xml
 repo sync -c -j2
 ```
 
-The copy path above assumes the local manifest is copied into the checkout after the device tree is already available. For a clean checkout, download this repository's `build/local_manifests/ice.xml` into `.repo/local_manifests/ice.xml` before running `repo sync`.
+The command downloads the tracked local manifest directly, so you do not need a prior device-tree checkout.
 
 After sync, verify that the repo manifest resolves every project and that `derp_ice-userdebug` is listed by the build environment. Do not assume a successful sync proves buildability. Run the build only after auditing the YAAP overlays and device-specific compatibility issues.
 
