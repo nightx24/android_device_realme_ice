@@ -14,10 +14,10 @@
 
 ## Changes on `ice-17`
 
-- Added `build/local_manifests/ice.xml` for the five existing device, vendor, common, hardware, and kernel repositories.
+- Added `build/local_manifests/ice.xml` for the six device, vendor, common, common-vendor, hardware, and kernel repositories.
 - Added an initial `derp_ice.mk` product definition using the DerpFest Android 17 vendor configuration path.
 - Updated `AndroidProducts.mk` to expose `derp_ice-user`, `derp_ice-userdebug`, and `derp_ice-eng`.
-- Added a GitHub Actions preflight to check source branches, local-manifest XML, and product metadata.
+- Added a GitHub Actions preflight to check source branches, local-manifest XML, product metadata, DerpFest vendor config inheritance, and kernel config fragment presence.
 - Added a source audit documenting confirmed manifest paths and unresolved compatibility checks.
 
 The product makefile is an **initial port, not a compile-tested configuration**.
@@ -25,10 +25,11 @@ The product makefile is an **initial port, not a compile-tested configuration**.
 ## Remaining blockers
 
 1. `device.mk` still includes `overlay-yaap`. Its resources need review for YAAP-specific assumptions and Android 17 compatibility before deciding whether to retain, adapt, or remove them.
-2. Confirm the device and SM8350 common trees are compatible with the exact DerpFest Android 17 manifest revisions.
-3. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF, partition sizes, kernel configuration, module loading, and SELinux policy.
+2. Verify that the Yupik kernel config fragment is appropriate for this exact device despite the common tree's Lahaina defaults; file presence alone does not prove hardware compatibility.
+3. Confirm the device and SM8350 common trees are compatible with the exact DerpFest Android 17 manifest revisions.
+4. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF, partition sizes, kernel configuration, module loading, and SELinux policy.
 4. Resolve all product copy-file sources and check all referenced overlays/configs after the source tree is synced.
-5. No boot, recovery, OTA, or ROM image has been compiled or tested on hardware.
+6. No boot, recovery, OTA, or ROM image has been compiled or tested on hardware.
 
 ## Source setup (on a suitably provisioned build runner)
 
