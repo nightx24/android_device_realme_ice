@@ -10,7 +10,7 @@
 - DerpFest vendor repository: [DerpFest-AOSP/android_vendor_derpfest, branch 17](https://github.com/DerpFest-AOSP/android_vendor_derpfest/tree/17)
 - Port review: [ANDROID17_PORT_AUDIT.md](ANDROID17_PORT_AUDIT.md)
 
-**Blocking issue:** device-specific configuration uses the Qualcomm Yupik platform, while the inherited SM8350 common tree sets Lahaina as the target platform and kernel base config. This combination has not been validated. Resolve it using verified stock device information and a genuinely matching common/kernel tree before attempting a full build.
+**Kernel configuration review needed:** Lahaina is the intended platform. The inherited common tree sets Lahaina and uses `vendor/lahaina-qgki_defconfig`, while device `BoardConfig.mk` appends `vendor/oplus_yupik_QGKI.config`. Review the final merged kernel `.config` and preserve the device-specific NFC, touchpanel, and Wi-Fi options before building; do not remove the fragment blindly.
 
 **Do not flash this build to a OnePlus 15R or any other model.** This device tree identifies Realme RMX3461 and has not been hardware-tested as part of this work.
 
@@ -26,7 +26,7 @@ The product makefile is an **initial port, not a compile-tested configuration**.
 
 ## Remaining blockers
 
-1. Resolve the Yupik-vs-Lahaina platform/common-tree/kernel mismatch. Confirm the exact RMX3461 chipset/platform from a verified stock build and use a common tree and kernel configuration that explicitly support it.
+1. Verify that the Yupik-named device kernel fragment is appropriate with the Lahaina base defconfig. Inspect the final merged kernel `.config` and ensure required device drivers remain enabled.
 2. `device.mk` still includes `overlay-yaap`. Review its resources for YAAP-specific assumptions and Android 17 compatibility before deciding whether to retain, adapt, or remove them.
 3. Confirm the device and common trees are compatible with the exact DerpFest Android 17 manifest revisions.
 4. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF, partition sizes, kernel configuration, module loading, and SELinux policy.
@@ -37,7 +37,7 @@ The product makefile is an **initial port, not a compile-tested configuration**.
 
 This project does not require a personal PC if you have access to a cloud runner with enough storage. A standard GitHub-hosted runner generally does **not** have enough free disk for a complete Android checkout and build; this repository's preflight does not attempt the full build.
 
-**Do not run a full build until the platform mismatch above is resolved.** After that, on a runner with several hundred GB of available disk and sufficient RAM/CPU:
+**Do not run a full build until the kernel configuration and remaining compatibility checks are resolved.** After that, on a runner with several hundred GB of available disk and sufficient RAM/CPU:
 
 ```bash
 repo init -u https://github.com/DerpFest-AOSP/android_manifest.git -b 17
