@@ -27,7 +27,7 @@ This is a **kernel config consistency check**, not evidence that the Lahaina com
 4. **Proprietary source paths:** a static comparison of `ice-vendor.mk` against the proprietary vendor repository tree found all 617 unique `PRODUCT_COPY_FILES` source paths in the manifest. This confirms source-path presence in Git, not that every destination is correct or that blobs work on Android 17.
 5. **Device-local paths:** the audio XMLs, media profiles, display config XML, and `init.oplus_ice.rc` referenced in `device.mk` exist in the device tree.
 6. **Product identity needs device-side validation.** `derp_ice.mk` sets product/device/brand/model and GMS client ID, but the model and release identity must be checked against a verified stock build for this exact device.
-7. **Duplicate copy entry.** `device.mk` lists `media/media_profiles_vendor.xml` twice at the same destination. It appears redundant; remove one copy entry only after preserving the existing source/destination mapping.
+7. **Duplicate copy entry fixed:** removed the second identical `media/media_profiles_vendor.xml` mapping from `device.mk`; the original source/destination mapping remains.
 
 ## Next safe engineering milestone
 
