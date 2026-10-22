@@ -121,10 +121,11 @@ jobs:
           {
             echo "## Ice 17 ROM preflight"
             echo
-            echo "- Device tree branch: `ice-17` (working branch created from `seventeen`)"
-            echo "- Source branches are checked for existence; this does not prove Android-version compatibility."
+            echo "- Device tree branch: ice-17 (working branch created from seventeen)"
+            echo "- Source branch existence does not prove Android-version compatibility."
             echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
-            echo "- DerpFest manifest and vendor branch 17 are checked independently from the device repositories.
-            echo "- The initial derp_ice product definition is not a compile-tested port; audit overlay-yaap, kernel config, VINTF, proprietary blobs and SELinux before any build."
-            echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build; no full build is launched by this preflight."
+            echo "- DerpFest manifest and vendor branch 17 are checked independently from the device repositories."
+            echo "- The derp_ice product definition is an initial port, not a compile-tested port."
+            echo "- Audit overlay-yaap, kernel config, VINTF, proprietary blobs and SELinux before any full build."
+            echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build."
           } >> "$GITHUB_STEP_SUMMARY"
