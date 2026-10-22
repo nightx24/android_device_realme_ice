@@ -1,0 +1,85 @@
+name: Ice 17 ROM Preflight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ice-17
+    paths:
+      - ".github/workflows/rom-preflight.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ice-17-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Verify ROM sources before building
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out device tree
+        uses: actions/checkout@v4
+
+      - name: Verify required source branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_branch() {
+            local repo="$1"
+            local branch="$2"
+            echo "::group::Checking $repo @ $branch"
+            if git ls-remote --exit-code --heads "https://github.com/$repo.git" "$branch" >/dev/null; then
+              echo "FOUND: $repo branch $branch"
+            else
+              echo "::error::Missing branch $branch in $repo"
+              exit 1
+            fi
+            echo "::endgroup::"
+          }
+
+          check_branch "nightx24/android_device_realme_ice" "seventeen"
+          check_branch "nightx24/proprietary_vendor_realme_ice" "seventeen"
+          check_branch "nightx24/android_device_oneplus_sm8350-common" "seventeen"
+          check_branch "nightx24/android_hardware_oplus" "seventeen"
+          check_branch "nightx24/kernel_oneplus_sm8350" "seventeen"
+
+      - name: Check DerpFest manifest availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Checking public DerpFest manifest branches..."
+          git ls-remote --heads https://github.com/DerpFest-AOSP/manifest.git
+          if git ls-remote --exit-code --heads https://github.com/DerpFest-AOSP/manifest.git '17' >/dev/null; then
+            echo "A branch named 17 exists."
+          else
+            echo "::warning::No branch named '17' was found in DerpFest-AOSP/manifest. Do not start a ROM build until the correct Android 17 manifest repository and branch are confirmed."
+          fi
+
+      - name: Check current product configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f BoardConfig.mk || { echo "::error::BoardConfig.mk missing"; exit 1; }
+          test -f AndroidProducts.mk || { echo "::error::AndroidProducts.mk missing"; exit 1; }
+          echo "Device codename and product references:"
+          grep -nE 'PRODUCT_MAKEFILES|COMMON_LUNCH_CHOICES|yaap_ice|derp_ice|PRODUCT_DEVICE|PRODUCT_MODEL' AndroidProducts.mk *.mk || true
+          if grep -q 'yaap_ice' AndroidProducts.mk; then
+            echo "::warning::Current AndroidProducts.mk references YAAP. A DerpFest product makefile and correct lunch target must be established before compilation."
+          fi
+
+      - name: Write preflight summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Ice 17 ROM preflight"
+            echo
+            echo "- Device tree branch: `ice-17` (working branch created from `seventeen`)"
+            echo "- Source branches are checked for existence; this does not prove Android-version compatibility."
+            echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
+            echo "- Confirm the DerpFest Android 17 manifest and adapt the YAAP product definitions before enabling a build."
+          } >> "$GITHUB_STEP_SUMMARY"
