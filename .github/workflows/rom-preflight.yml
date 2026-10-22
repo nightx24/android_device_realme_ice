@@ -8,9 +8,12 @@ on:
     paths:
       - ".github/workflows/rom-preflight.yml"
       - "AndroidProducts.mk"
+      - "BoardConfig.mk"
+      - "device.mk"
       - "derp_ice.mk"
       - "build/local_manifests/ice.xml"
       - "BUILDING.md"
+      - "ANDROID17_PORT_AUDIT.md"
 
 permissions:
   contents: read
@@ -51,24 +54,27 @@ jobs:
           check_branch "nightx24/android_hardware_oplus" "seventeen"
           check_branch "nightx24/kernel_oneplus_sm8350" "seventeen"
 
-      - name: Check DerpFest manifest availability
+      - name: Check DerpFest manifest and product include
         shell: bash
         run: |
           set -euo pipefail
-          echo "Checking public DerpFest manifest branches..."
-          git ls-remote --heads https://github.com/DerpFest-AOSP/android_manifest.git
-          if git ls-remote --exit-code --heads https://github.com/DerpFest-AOSP/android_manifest.git '17' >/dev/null; then
-            echo "FOUND: DerpFest-AOSP/android_manifest branch 17"
-          else
-            echo "::error::DerpFest-AOSP/android_manifest branch 17 was not found."
+          for repo in android_manifest android_vendor_derpfest; do
+            if git ls-remote --exit-code --heads "https://github.com/DerpFest-AOSP/$repo.git" '17' >/dev/null; then
+              echo "FOUND: DerpFest-AOSP/$repo branch 17"
+            else
+              echo "::error::DerpFest-AOSP/$repo branch 17 was not found."
+              exit 1
+            fi
+          done
+
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          curl -fsSL "https://raw.githubusercontent.com/DerpFest-AOSP/android_vendor_derpfest/17/config/common_mobile_full.mk" -o "$tmp"
+          grep -q 'vendor/lineage/config/common_mobile.mk' "$tmp" || {
+            echo "::error::DerpFest common_mobile_full.mk no longer inherits common_mobile.mk at the expected path."
             exit 1
-          fi
-          if git ls-remote --exit-code --heads https://github.com/DerpFest-AOSP/android_vendor_derpfest.git '17' >/dev/null; then
-            echo "FOUND: DerpFest-AOSP/android_vendor_derpfest branch 17"
-          else
-            echo "::error::DerpFest vendor repository branch 17 was not found."
-            exit 1
-          fi
+          }
+          echo "FOUND: DerpFest Android 17 common_mobile_full.mk and expected inheritance."
 
       - name: Validate local manifest XML
         shell: bash
@@ -98,8 +104,10 @@ jobs:
         run: |
           set -euo pipefail
           test -f BoardConfig.mk || { echo "::error::BoardConfig.mk missing"; exit 1; }
+          test -f device.mk || { echo "::error::device.mk missing"; exit 1; }
           test -f AndroidProducts.mk || { echo "::error::AndroidProducts.mk missing"; exit 1; }
           test -f derp_ice.mk || { echo "::error::derp_ice.mk missing"; exit 1; }
+          test -f ANDROID17_PORT_AUDIT.md || { echo "::error::Port audit document missing"; exit 1; }
           grep -q 'derp_ice.mk' AndroidProducts.mk || { echo "::error::AndroidProducts.mk does not select derp_ice.mk"; exit 1; }
           grep -q 'derp_ice-userdebug' AndroidProducts.mk || { echo "::error::DerpFest lunch target missing"; exit 1; }
           grep -q 'PRODUCT_DEVICE := ice' derp_ice.mk || { echo "::error::Wrong PRODUCT_DEVICE"; exit 1; }
@@ -113,6 +121,9 @@ jobs:
           if grep -q 'overlay-yaap' device.mk; then
             echo "::warning::device.mk still references overlay-yaap. Audit those resources for YAAP-specific assumptions before attempting a full build."
           fi
+          if [ "$(grep -c 'media_profiles_vendor.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml' device.mk)" -gt 1 ]; then
+            echo "::warning::device.mk has duplicate media_profiles_vendor.xml copy entries."
+          fi
 
       - name: Write preflight summary
         if: always()
@@ -124,7 +135,7 @@ jobs:
             echo "- Device tree branch: ice-17 (working branch created from seventeen)"
             echo "- Source branch existence does not prove Android-version compatibility."
             echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
-            echo "- DerpFest manifest and vendor branch 17 are checked independently from the device repositories."
+            echo "- DerpFest manifest and vendor branch 17 plus the expected product config path are checked."
             echo "- The derp_ice product definition is an initial port, not a compile-tested port."
             echo "- Audit overlay-yaap, kernel config, VINTF, proprietary blobs and SELinux before any full build."
             echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build."
