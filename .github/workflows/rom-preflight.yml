@@ -59,6 +59,29 @@ jobs:
             echo "::warning::No branch named '17' was found in DerpFest-AOSP/android_manifest. Do not start a ROM build until the correct Android 17 manifest repository and branch are confirmed."
           fi
 
+      - name: Validate local manifest XML
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/local_manifests/ice.xml || { echo "::error::build/local_manifests/ice.xml missing"; exit 1; }
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("build/local_manifests/ice.xml").getroot()
+          projects = {p.attrib.get("path"): p.attrib for p in root.findall("project")}
+          expected = {
+              "device/realme/ice",
+              "vendor/realme/ice",
+              "device/oneplus/sm8350-common",
+              "hardware/oplus",
+              "kernel/oneplus/sm8350",
+          }
+          missing = expected - projects.keys()
+          if missing:
+              raise SystemExit("Missing local manifest project paths: " + ", ".join(sorted(missing)))
+          for path in sorted(expected):
+              print(f"OK: {path} -> {projects[path].get('name')} @ {projects[path].get('revision')}")
+          PY
+
       - name: Check current product configuration
         shell: bash
         run: |
