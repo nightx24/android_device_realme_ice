@@ -90,6 +90,32 @@ jobs:
           }
           echo "FOUND: kernel defconfig and Yupik config fragment."
 
+      - name: Parse device and common VINTF XML
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/nightx24/android_device_realme_ice/ice-17/vintf/compatibility_matrix.xml" -o /tmp/ice-compatibility_matrix.xml
+          curl -fsSL "https://raw.githubusercontent.com/nightx24/android_device_oneplus_sm8350-common/seventeen/vintf/manifest.xml" -o /tmp/sm8350-manifest.xml
+          curl -fsSL "https://raw.githubusercontent.com/nightx24/android_device_oneplus_sm8350-common/seventeen/vintf/manifest_odm.xml" -o /tmp/sm8350-manifest_odm.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          for path in (
+              "/tmp/ice-compatibility_matrix.xml",
+              "/tmp/sm8350-manifest.xml",
+              "/tmp/sm8350-manifest_odm.xml",
+          ):
+              root = ET.parse(path).getroot()
+              print(f"XML OK: {path} <{root.tag}>")
+          PY
+
+      - name: Verify common vendor makefile exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/Debarpan102/proprietary_vendor_oneplus_sm8350-common/seventeen/sm8350-common-vendor.mk" -o /tmp/sm8350-common-vendor.mk
+          grep -q 'PRODUCT_SOONG_NAMESPACES' /tmp/sm8350-common-vendor.mk
+          echo "FOUND: SM8350 common proprietary vendor makefile."
+
       - name: Validate local manifest XML
         shell: bash
         run: |
