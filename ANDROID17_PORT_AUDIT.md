@@ -2,16 +2,13 @@
 
 Status: static source audit only. This is not a successful Android build and does not certify a bootable image.
 
-## Blocking platform mismatch to resolve first
+## Lahaina target and remaining kernel-fragment question
 
-**Do not attempt a full build or flash until this is resolved.**
+The project owner has confirmed that **Lahaina is the intended platform**. Treat the inherited common tree's `TARGET_BOARD_PLATFORM := lahaina` and `vendor/lahaina-qgki_defconfig` as the intended base; do not switch the port to Yupik based only on the fragment name.
 
-- The device tree identifies the product as Realme RMX3461 and its device-specific audio/configuration files use the Qualcomm `yupik` platform naming.
-- The device `BoardConfig.mk` appends `vendor/oplus_yupik_QGKI.config`.
-- However, the inherited repository is named `android_device_oneplus_sm8350-common`; its `BoardConfigCommon.mk` sets `TARGET_BOARD_PLATFORM := lahaina`, `TARGET_BOOTLOADER_BOARD_NAME := lahaina`, and `TARGET_KERNEL_CONFIG := vendor/lahaina-qgki_defconfig`.
-- The kernel source contains both `CONFIG_ARCH_LAHAINA=y` and `CONFIG_ARCH_YUPIK=y` config files, but their existence does not establish that mixing the Lahaina base configuration with the Yupik fragment is correct for this exact phone.
+One item still needs verification before a full build: device `BoardConfig.mk` appends `vendor/oplus_yupik_QGKI.config`, and that fragment sets `CONFIG_ARCH_YUPIK=y`. The kernel base defconfig sets `CONFIG_ARCH_LAHAINA=y`. The Yupik fragment also contains device-specific NFC, touchpanel, and Wi-Fi options, so removing it wholesale could break hardware features. Review the exact kernel configuration merge behavior and source-device lineage; then retain, replace, or split the fragment so the final configuration matches Lahaina while preserving the required device drivers.
 
-This is a high-risk platform mismatch, not a cosmetic naming issue. Verify the exact RMX3461 chipset/platform, stock kernel defconfig and device tree, and find a matching common device tree and kernel/vendor sources. If the device is actually a Yupik/SM7325 target, do not inherit a Lahaina/SM8350 board configuration unless its maintainers explicitly document support for that device/platform.
+This is a **kernel config consistency check**, not evidence that the Lahaina common tree itself is wrong. Confirm the final merged `.config` and verify that the device tree, vendor blobs, and kernel sources all match the intended hardware before building or flashing.
 
 ## Confirmed from source
 
