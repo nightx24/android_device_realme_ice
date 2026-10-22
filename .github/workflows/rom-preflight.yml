@@ -52,11 +52,11 @@ jobs:
         run: |
           set -euo pipefail
           echo "Checking public DerpFest manifest branches..."
-          git ls-remote --heads https://github.com/DerpFest-AOSP/manifest.git
+          git ls-remote --heads https://github.com/DerpFest-AOSP/android_manifest.git
           if git ls-remote --exit-code --heads https://github.com/DerpFest-AOSP/manifest.git '17' >/dev/null; then
             echo "A branch named 17 exists."
           else
-            echo "::warning::No branch named '17' was found in DerpFest-AOSP/manifest. Do not start a ROM build until the correct Android 17 manifest repository and branch are confirmed."
+            echo "::warning::No branch named '17' was found in DerpFest-AOSP/android_manifest. Do not start a ROM build until the correct Android 17 manifest repository and branch are confirmed."
           fi
 
       - name: Check current product configuration
@@ -81,5 +81,5 @@ jobs:
             echo "- Device tree branch: `ice-17` (working branch created from `seventeen`)"
             echo "- Source branches are checked for existence; this does not prove Android-version compatibility."
             echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
-            echo "- Confirm the DerpFest Android 17 manifest and adapt the YAAP product definitions before enabling a build."
+            echo "- The official manifest branch is DerpFest-AOSP/android_manifest:17. Adapt the YAAP product definitions and provide a runner with hundreds of GB of disk before enabling a full build."
           } >> "$GITHUB_STEP_SUMMARY"
