@@ -116,6 +116,17 @@ jobs:
           grep -q 'PRODUCT_SOONG_NAMESPACES' /tmp/sm8350-common-vendor.mk
           echo "FOUND: SM8350 common proprietary vendor makefile."
 
+      - name: Flag device/common platform mismatch for manual review
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/nightx24/android_device_oneplus_sm8350-common/seventeen/BoardConfigCommon.mk" -o /tmp/BoardConfigCommon.mk
+          if grep -q 'TARGET_BOARD_PLATFORM := lahaina' /tmp/BoardConfigCommon.mk && grep -q 'TARGET_KERNEL_CONFIG := vendor/lahaina-qgki_defconfig' /tmp/BoardConfigCommon.mk && grep -q 'vendor/oplus_yupik_QGKI.config' BoardConfig.mk; then
+            echo "::warning::Device BoardConfig appends a Yupik kernel config fragment while inherited common BoardConfig sets Lahaina platform and base defconfig. Verify exact RMX3461 hardware and common-tree compatibility before building."
+          else
+            echo "Platform mismatch pattern not detected by this simple static check; hardware compatibility still requires validation."
+          fi
+
       - name: Validate local manifest XML
         shell: bash
         run: |
@@ -178,6 +189,7 @@ jobs:
             echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
             echo "- DerpFest manifest/vendor configuration, local manifest projects, and kernel config fragments are checked."
             echo "- The derp_ice product definition is an initial port, not a compile-tested port."
+            echo "- Verify the possible Yupik-vs-Lahaina platform/common-tree mismatch before any full build."
             echo "- Audit overlay-yaap, VINTF, proprietary blobs and SELinux before any full build."
             echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build."
           } >> "$GITHUB_STEP_SUMMARY"
