@@ -18,6 +18,10 @@
            path="device/oneplus/sm8350-common"
            remote="nightx24"
            revision="refs/heads/seventeen" />
+  <project name="Debarpan102/proprietary_vendor_oneplus_sm8350-common"
+           path="vendor/oneplus/sm8350-common"
+           remote="nightx24"
+           revision="refs/heads/seventeen" />
   <project name="nightx24/android_hardware_oplus"
            path="hardware/oplus"
            remote="nightx24"
