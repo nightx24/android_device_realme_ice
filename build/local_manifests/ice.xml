@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!--
+    Local manifest for the Realme RMX3461 ("ice") device tree.
+    Keep the device repositories on the matching "seventeen" branches.
+    This file is copied to .repo/local_manifests/ice.xml before repo sync.
+  -->
+  <remote name="nightx24" fetch="https://github.com/" />
+  <project name="nightx24/android_device_realme_ice"
+           path="device/realme/ice"
+           remote="nightx24"
+           revision="refs/heads/seventeen" />
+  <project name="nightx24/proprietary_vendor_realme_ice"
+           path="vendor/realme/ice"
+           remote="nightx24"
+           revision="refs/heads/seventeen" />
+  <project name="nightx24/android_device_oneplus_sm8350-common"
+           path="device/oneplus/sm8350-common"
+           remote="nightx24"
+           revision="refs/heads/seventeen" />
+  <project name="nightx24/android_hardware_oplus"
+           path="hardware/oplus"
+           remote="nightx24"
+           revision="refs/heads/seventeen" />
+  <project name="nightx24/kernel_oneplus_sm8350"
+           path="kernel/oneplus/sm8350"
+           remote="nightx24"
+           revision="refs/heads/seventeen" />
+</manifest>
