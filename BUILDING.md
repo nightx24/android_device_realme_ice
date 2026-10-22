@@ -8,6 +8,7 @@
 - Device-source branches: `seventeen`
 - ROM manifest: [DerpFest-AOSP/android_manifest, branch 17](https://github.com/DerpFest-AOSP/android_manifest/tree/17)
 - DerpFest vendor repository: [DerpFest-AOSP/android_vendor_derpfest, branch 17](https://github.com/DerpFest-AOSP/android_vendor_derpfest/tree/17)
+- Port review: [ANDROID17_PORT_AUDIT.md](ANDROID17_PORT_AUDIT.md)
 
 **Do not flash this build to a OnePlus 15R or any other model.** This device tree identifies Realme RMX3461 and has not been hardware-tested as part of this work.
 
@@ -17,6 +18,7 @@
 - Added an initial `derp_ice.mk` product definition using the DerpFest Android 17 vendor configuration path.
 - Updated `AndroidProducts.mk` to expose `derp_ice-user`, `derp_ice-userdebug`, and `derp_ice-eng`.
 - Added a GitHub Actions preflight to check source branches, local-manifest XML, and product metadata.
+- Added a source audit documenting confirmed manifest paths and unresolved compatibility checks.
 
 The product makefile is an **initial port, not a compile-tested configuration**.
 
@@ -25,7 +27,7 @@ The product makefile is an **initial port, not a compile-tested configuration**.
 1. `device.mk` still includes `overlay-yaap`. Its resources need review for YAAP-specific assumptions and Android 17 compatibility before deciding whether to retain, adapt, or remove them.
 2. Confirm the device and SM8350 common trees are compatible with the exact DerpFest Android 17 manifest revisions.
 3. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF, partition sizes, kernel configuration, module loading, and SELinux policy.
-4. Check all product references and generated build targets after the source tree is synced.
+4. Resolve all product copy-file sources and check all referenced overlays/configs after the source tree is synced.
 5. No boot, recovery, OTA, or ROM image has been compiled or tested on hardware.
 
 ## Source setup (on a suitably provisioned build runner)
