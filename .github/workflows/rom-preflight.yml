@@ -10,7 +10,6 @@ on:
       - "AndroidProducts.mk"
       - "BoardConfig.mk"
       - "device.mk"
-      - "ANDROID17_PORT_AUDIT.md"
       - "derp_ice.mk"
       - "build/local_manifests/ice.xml"
       - "BUILDING.md"
@@ -18,10 +17,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ice-17-preflight-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   preflight:
@@ -84,145 +79,12 @@ jobs:
           set -euo pipefail
           base="https://raw.githubusercontent.com/nightx24/kernel_oneplus_sm8350/seventeen/arch/arm64/configs/vendor"
           curl -fsSL "$base/oplus_yupik_QGKI.config" -o /tmp/oplus_yupik_QGKI.config
-          grep -q '^CONFIG_ARCH_YUPIK=y
-      - name: Validate local manifest XML
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f build/local_manifests/ice.xml || { echo "::error::build/local_manifests/ice.xml missing"; exit 1; }
-          python3 - <<'PY'
-          import xml.etree.ElementTree as ET
-          root = ET.parse("build/local_manifests/ice.xml").getroot()
-          projects = {p.attrib.get("path"): p.attrib for p in root.findall("project")}
-          expected = {
-              "device/realme/ice",
-              "vendor/realme/ice",
-              "device/oneplus/sm8350-common",
-              "vendor/oneplus/sm8350-common",
-              "hardware/oplus",
-              "kernel/oneplus/sm8350",
-          }
-          missing = expected - projects.keys()
-          if missing:
-              raise SystemExit("Missing local manifest project paths: " + ", ".join(sorted(missing)))
-          for path in sorted(expected):
-              print(f"OK: {path} -> {projects[path].get('name')} @ {projects[path].get('revision')}")
-          PY
-
-      - name: Check current product configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f BoardConfig.mk || { echo "::error::BoardConfig.mk missing"; exit 1; }
-          test -f device.mk || { echo "::error::device.mk missing"; exit 1; }
-          test -f AndroidProducts.mk || { echo "::error::AndroidProducts.mk missing"; exit 1; }
-          test -f derp_ice.mk || { echo "::error::derp_ice.mk missing"; exit 1; }
-          test -f ANDROID17_PORT_AUDIT.md || { echo "::error::Port audit document missing"; exit 1; }
-          grep -q 'derp_ice.mk' AndroidProducts.mk || { echo "::error::AndroidProducts.mk does not select derp_ice.mk"; exit 1; }
-          grep -q 'derp_ice-userdebug' AndroidProducts.mk || { echo "::error::DerpFest lunch target missing"; exit 1; }
-          grep -q 'PRODUCT_DEVICE := ice' derp_ice.mk || { echo "::error::Wrong PRODUCT_DEVICE"; exit 1; }
-          grep -q 'PRODUCT_MODEL := RMX3461' derp_ice.mk || { echo "::error::Wrong PRODUCT_MODEL"; exit 1; }
-          grep -q 'vendor/lineage/config/common_mobile_full.mk' derp_ice.mk || { echo "::error::Expected Android 17 DerpFest vendor config include missing"; exit 1; }
-          if grep -q 'yaap_ice' AndroidProducts.mk; then
-            echo "::error::AndroidProducts.mk must not select the old YAAP product"
-            exit 1
-          fi
-          echo "Product makefile static checks passed."
-          if grep -q 'overlay-yaap' device.mk; then
-            echo "::warning::device.mk still references overlay-yaap. Audit those resources for YAAP-specific assumptions before attempting a full build."
-          fi
-          if [ "$(grep -c 'media_profiles_vendor.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml' device.mk)" -gt 1 ]; then
-            echo "::warning::device.mk has duplicate media_profiles_vendor.xml copy entries."
-          fi
-
-      - name: Write preflight summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## Ice 17 ROM preflight"
-            echo
-            echo "- Device tree branch: ice-17 (working branch created from seventeen)"
-            echo "- Source branch existence does not prove Android-version compatibility."
-            echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
-            echo "- DerpFest manifest and vendor branch 17 plus the expected product config path are checked."
-            echo "- The derp_ice product definition is an initial port, not a compile-tested port."
-            echo "- Required SM8350 common proprietary vendor dependency and kernel config fragments are checked."
-            echo "- Audit overlay-yaap, VINTF, proprietary blobs and SELinux before any full build."
-            echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build."
-          } >> "$GITHUB_STEP_SUMMARY"
- /tmp/oplus_yupik_QGKI.config || {
+          grep -q '^CONFIG_ARCH_YUPIK=y$' /tmp/oplus_yupik_QGKI.config || {
             echo "::error::Yupik kernel config fragment is missing CONFIG_ARCH_YUPIK=y."
             exit 1
           }
           curl -fsSL "$base/lahaina-qgki_defconfig" -o /tmp/lahaina-qgki_defconfig
-          grep -q '^CONFIG_ARCH_LAHAINA=y
-      - name: Validate local manifest XML
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f build/local_manifests/ice.xml || { echo "::error::build/local_manifests/ice.xml missing"; exit 1; }
-          python3 - <<'PY'
-          import xml.etree.ElementTree as ET
-          root = ET.parse("build/local_manifests/ice.xml").getroot()
-          projects = {p.attrib.get("path"): p.attrib for p in root.findall("project")}
-          expected = {
-              "device/realme/ice",
-              "vendor/realme/ice",
-              "device/oneplus/sm8350-common",
-              "vendor/oneplus/sm8350-common",
-              "hardware/oplus",
-              "kernel/oneplus/sm8350",
-          }
-          missing = expected - projects.keys()
-          if missing:
-              raise SystemExit("Missing local manifest project paths: " + ", ".join(sorted(missing)))
-          for path in sorted(expected):
-              print(f"OK: {path} -> {projects[path].get('name')} @ {projects[path].get('revision')}")
-          PY
-
-      - name: Check current product configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f BoardConfig.mk || { echo "::error::BoardConfig.mk missing"; exit 1; }
-          test -f device.mk || { echo "::error::device.mk missing"; exit 1; }
-          test -f AndroidProducts.mk || { echo "::error::AndroidProducts.mk missing"; exit 1; }
-          test -f derp_ice.mk || { echo "::error::derp_ice.mk missing"; exit 1; }
-          test -f ANDROID17_PORT_AUDIT.md || { echo "::error::Port audit document missing"; exit 1; }
-          grep -q 'derp_ice.mk' AndroidProducts.mk || { echo "::error::AndroidProducts.mk does not select derp_ice.mk"; exit 1; }
-          grep -q 'derp_ice-userdebug' AndroidProducts.mk || { echo "::error::DerpFest lunch target missing"; exit 1; }
-          grep -q 'PRODUCT_DEVICE := ice' derp_ice.mk || { echo "::error::Wrong PRODUCT_DEVICE"; exit 1; }
-          grep -q 'PRODUCT_MODEL := RMX3461' derp_ice.mk || { echo "::error::Wrong PRODUCT_MODEL"; exit 1; }
-          grep -q 'vendor/lineage/config/common_mobile_full.mk' derp_ice.mk || { echo "::error::Expected Android 17 DerpFest vendor config include missing"; exit 1; }
-          if grep -q 'yaap_ice' AndroidProducts.mk; then
-            echo "::error::AndroidProducts.mk must not select the old YAAP product"
-            exit 1
-          fi
-          echo "Product makefile static checks passed."
-          if grep -q 'overlay-yaap' device.mk; then
-            echo "::warning::device.mk still references overlay-yaap. Audit those resources for YAAP-specific assumptions before attempting a full build."
-          fi
-          if [ "$(grep -c 'media_profiles_vendor.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml' device.mk)" -gt 1 ]; then
-            echo "::warning::device.mk has duplicate media_profiles_vendor.xml copy entries."
-          fi
-
-      - name: Write preflight summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## Ice 17 ROM preflight"
-            echo
-            echo "- Device tree branch: ice-17 (working branch created from seventeen)"
-            echo "- Source branch existence does not prove Android-version compatibility."
-            echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
-            echo "- DerpFest manifest and vendor branch 17 plus the expected product config path are checked."
-            echo "- The derp_ice product definition is an initial port, not a compile-tested port."
-            echo "- Audit overlay-yaap, kernel config, VINTF, proprietary blobs and SELinux before any full build."
-            echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build."
-          } >> "$GITHUB_STEP_SUMMARY"
- /tmp/lahaina-qgki_defconfig || {
+          grep -q '^CONFIG_ARCH_LAHAINA=y$' /tmp/lahaina-qgki_defconfig || {
             echo "::error::Common Lahaina defconfig is missing CONFIG_ARCH_LAHAINA=y."
             exit 1
           }
@@ -285,11 +147,11 @@ jobs:
           {
             echo "## Ice 17 ROM preflight"
             echo
-            echo "- Device tree branch: ice-17 (working branch created from seventeen)"
+            echo "- Device tree branch: ice-17"
             echo "- Source branch existence does not prove Android-version compatibility."
             echo "- No source checkout, compilation, flashing, or repository rewrite is performed by this workflow."
-            echo "- DerpFest manifest and vendor branch 17 plus the expected product config path are checked."
+            echo "- DerpFest manifest/vendor configuration, local manifest projects, and kernel config fragments are checked."
             echo "- The derp_ice product definition is an initial port, not a compile-tested port."
-            echo "- Audit overlay-yaap, kernel config, VINTF, proprietary blobs and SELinux before any full build."
+            echo "- Audit overlay-yaap, VINTF, proprietary blobs and SELinux before any full build."
             echo "- Standard GitHub-hosted runners generally lack the disk space for a full Android source build."
           } >> "$GITHUB_STEP_SUMMARY"
