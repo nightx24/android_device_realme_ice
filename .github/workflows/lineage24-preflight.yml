@@ -88,6 +88,32 @@ jobs:
               print(f"OK: {path} -> {projects[path].get('name')} @ {projects[path].get('revision')}")
           PY
 
+      - name: Check device-local files referenced by product makefiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            audio/audio_platform_info_yupikidp.xml \
+            audio/mixer_paths_yupikidp.xml \
+            audio/sound_trigger_mixer_paths.xml \
+            audio/sound_trigger_platform_info.xml \
+            media/media_profiles_vendor.xml \
+            init/init.oplus_ice.rc \
+            init/Android.bp \
+            configs/displayconfig/display_id_4630946741972277890.xml \
+            vintf/compatibility_matrix.xml
+          do
+            if [[ ! -f "$path" ]]; then
+              echo "::error::Missing referenced device file: $path"
+              exit 1
+            fi
+            echo "OK: $path"
+          done
+          if grep -q 'overlay-yaap' device.mk; then
+            echo "::error::YAAP overlay must not be enabled in LineageOS product"
+            exit 1
+          fi
+
       - name: Parse device XML resources
         shell: bash
         run: |
