@@ -85,3 +85,12 @@ Obtain matching `boot.img`, `vendor_boot.img`, and `dtbo.img` from the known-wor
 
 A full DerpFest Android 17 build is still outstanding. The standard GitHub-hosted runner used for kernel CI does not provide the storage capacity normally needed for a complete Android source checkout and build.
 
+### Firmware and boot-component investigation (2026-10-23)
+
+The target phone is unrooted, so normal Android apps cannot read the protected raw boot partitions. Do not attempt to write to or dump block devices through an unprivileged shell. The preferred no-root route is to obtain the exact RMX3461 stock firmware package (or a verified full OTA package) and extract its images in a controlled build environment. If it contains `payload.bin`, use a reputable payload extractor to inspect the image set and compare build fingerprints / firmware versions before using any component.
+
+Research found an archived AlphaDroid OTA index for RMX3461 that points to `AlphaDroid-20230316-RMX3461-vanilla-v1.2.1.zip` (Android 13-era, 2023). It is useful evidence that public RMX3461 ROM packages existed, but it is old and is **not approved as the source of boot components** for the currently installed YAAP build or this Android 17 port. Index: https://github.com/AlphaDroid-devices/OTA/blob/main/RMX3461.json .
+
+Research also found a public RMX3461 TWRP device tree with `prebuilt/dtbo.img` and a prebuilt kernel, but no matching `boot.img` + `vendor_boot.img` set was identified. A recovery-tree prebuilt DTBO alone does not establish matching firmware version, boot ramdisk, vendor boot modules, or AVB metadata, so it must not be treated as a complete or verified boot-image set: https://github.com/realme9se-trees/twrp_device_realme_RMX3461/tree/main/prebuilt .
+
+**Current result:** no verified, version-matched stock firmware URL or complete boot-component set has been established yet. Continue searching for an official Realme RMX3461 package or a known-working YAAP release. Do not flash the raw kernel image or combine it with unverified boot components.
