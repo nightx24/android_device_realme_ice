@@ -9,7 +9,7 @@
   <project name="nightx24/android_device_realme_ice"
            path="device/realme/ice"
            remote="nightx24"
-           revision="refs/heads/seventeen" />
+           revision="refs/heads/ice-17" />
   <project name="nightx24/proprietary_vendor_realme_ice"
            path="vendor/realme/ice"
            remote="nightx24"
