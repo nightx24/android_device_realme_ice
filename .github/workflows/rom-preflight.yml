@@ -170,7 +170,7 @@ jobs:
           python3 - <<'PY'
           import pathlib, re
           mk = pathlib.Path("device.mk").read_text()
-          sources = sorted(set(re.findall(r"\\$\\(LOCAL_PATH\\)/([^:\\s]+):", mk)))
+          sources = sorted(set(re.findall(r"\$\(LOCAL_PATH\)/([^:\s]+):", mk)))
           if not sources:
               raise SystemExit("No device-local PRODUCT_COPY_FILES sources were found")
           missing = [p for p in sources if not (pathlib.Path(".") / p).is_file()]
