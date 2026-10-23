@@ -14,11 +14,13 @@
 - Added `lineage_ice.mk` inheriting LineageOS's `vendor/lineage/config/common_full_phone.mk`.
 - Updated `AndroidProducts.mk` to expose `lineage_ice-userdebug` and the other standard lunch choices.
 - Added `build/local_manifests/lineage-ice.xml` to sync the device tree, vendor blobs, SM8350 common tree/vendor, OPlus hardware, and kernel.
-- Added a GitHub Actions preflight for source branch availability and static product/manifest/XML checks.
+- Removed the YAAP-specific resource overlay from the LineageOS product until its resources can be reviewed and ported.
+- Corrected the vendor copy destination for the sound-trigger mixer configuration.
+- Expanded GitHub Actions preflight checks to validate device-local files referenced by the product configuration.
 
 ## Important compatibility notes
 
-The reference tree is on `lineage-23.0`, not `lineage-24.0`; it is a porting reference and has not been proven to compile on Android 17. The common device tree, proprietary vendor trees, kernel, init scripts, overlays, VINTF declarations, and SELinux policy still need Android 17 compatibility checks.
+The reference tree is on `lineage-23.0`, not `lineage-24.0`; it is a porting reference and has not been proven to compile on Android 17. The YAAP overlay is currently excluded rather than reused blindly. The common device tree, proprietary vendor trees, kernel, init scripts, future LineageOS overlays, VINTF declarations, and SELinux policy still need Android 17 compatibility checks.
 
 The local manifest currently reuses the existing `seventeen` branches for the device's vendor/common/kernel repositories. Branch existence is checked by CI, but branch existence alone does not prove they are compatible with LineageOS 24.0.
 
