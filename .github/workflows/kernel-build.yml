@@ -88,5 +88,6 @@ jobs:
             echo
             echo "- This job attempts an actual arm64 kernel Image compilation using the hosted runner's LLVM toolchain."
             echo "- A successful Image is not a flashable boot.img or a complete DerpFest ROM."
+            echo "- WALT and HID trace headers use directory-scoped include paths; compilation remains the validation gate."
             echo "- If compilation fails, inspect the compiler log and use the kernel's intended Android Clang toolchain before claiming success."
           } >> "$GITHUB_STEP_SUMMARY"
