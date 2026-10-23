@@ -62,6 +62,23 @@ The GitHub Actions kernel-image job completed successfully on run [39893491998](
 
 The common BoardConfig declares boot header version 3, a 4096-byte kernel page size, an A/B layout, and separate `boot`, `vendor_boot`, and `dtbo` partitions. Before constructing a flashable boot image, preserve the matching ramdisk and boot metadata from a verified RMX3461 build. Do not use a boot image from the user's separate OnePlus 15R or from an unrelated device.
 
+
+### Boot-image layout details checked against the shared BoardConfig
+
+| Setting | Source value |
+|---|---|
+| Boot header | v3 |
+| Kernel image name | `Image` |
+| Kernel page size | 4096 bytes |
+| DTBO | Separate image (`BOARD_KERNEL_SEPARATED_DTBO := true`) |
+| DTB in boot image | Enabled (`BOARD_INCLUDE_DTB_IN_BOOTIMG := true`) |
+| Boot image partition limit | 201,326,592 bytes |
+| Vendor boot partition limit | 201,326,592 bytes |
+| DTBO partition limit | 25,165,824 bytes |
+| Recovery resources | Moved to `vendor_boot` |
+
+These are build-tree declarations, not measurements of the installed phone's actual partitions. Verify them against the exact RMX3461 firmware images before packaging. The reference device-tree repository currently has no published GitHub Releases and no GitHub Actions run artifacts to retrieve as a known-good boot-image set. Therefore, do not substitute images from a different device or unrelated build.
+
 ### Next packaging gate
 
 Obtain matching `boot.img`, `vendor_boot.img`, and `dtbo.img` from the known-working RMX3461 YAAP build or matching stock firmware, then inspect their headers and contents. Do not create or flash a boot image until the source image layout, ramdisk arrangement, command line, DTB/DTBO handling, and partition sizes are confirmed. A successful kernel compile does not establish hardware bootability.
