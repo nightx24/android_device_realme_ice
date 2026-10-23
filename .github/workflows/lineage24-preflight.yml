@@ -113,6 +113,22 @@ jobs:
           done
           grep -q 'SOONG_CONFIG_OPLUS_LINEAGE_TOUCH_HAL_INCLUDE_DIR' BoardConfig.mk
           grep -q '$(DEVICE_PATH)/touch/include' BoardConfig.mk
+          check_module() {
+            local file="$1"
+            local module="$2"
+            if ! grep -Fq "name: \"$module\"" "$file"; then
+              echo "::error::Module $module is not declared in $file"
+              exit 1
+            fi
+            echo "OK: module $module declared in $file"
+          }
+          check_module overlay/OPlusFrameworksResTarget/Android.bp OPlusFrameworksResTarget
+          check_module overlay/OPlusSettingsResTarget/Android.bp OPlusSettingsResTarget
+          check_module overlay/OPlusSettingsProviderResTarget.9SE/Android.bp OPlusSettingsProviderResTarget.9SE
+          check_module overlay/OPlusSettingsProviderResTarget.Q3s/Android.bp OPlusSettingsProviderResTarget.Q3s
+          check_module overlay/OPlusSystemUIResTarget/Android.bp OPlusSystemUIResTarget
+          check_module overlay/OPlusWifiResTarget/Android.bp OPlusWifiResTarget
+          check_module init/Android.bp init.oplus_ice.rc
           if grep -q 'overlay-yaap' device.mk; then
             echo "::error::YAAP overlay must not be enabled in LineageOS product"
             exit 1
