@@ -1,46 +1,38 @@
-# Android 17 / DerpFest port audit — Realme RMX3461 (ice)
+# LineageOS Android 17 port audit — Realme RMX3461 (ice)
 
-Status: static source audit only. This is not a successful Android build and does not certify a bootable image.
+Status: source/static audit only. The GitHub Actions preflight passed, but this is **not** an Android source build and does not certify a bootable image or flashable ZIP.
 
-## Reference-port review: Lahaina base plus Yupik device fragment
+## Current target
 
-The project uses the SM8350 common tree, whose `BoardConfigCommon.mk` sets `TARGET_BOARD_PLATFORM := lahaina` and `TARGET_KERNEL_CONFIG := vendor/lahaina-qgki_defconfig`. The device tree then appends `vendor/oplus_yupik_QGKI.config`.
+- Device: Realme RMX3461, codename `ice`
+- ROM source branch: LineageOS `lineage-24.0` (Android 17 target)
+- Device tree branch: [nightx24/android_device_realme_ice:lineage-24.0](https://github.com/nightx24/android_device_realme_ice/tree/lineage-24.0)
+- Reference device tree: [pjgowtham/android_device_realme_ice:lineage-23.0](https://github.com/pjgowtham/android_device_realme_ice/tree/lineage-23.0)
+- Local manifest: `build/local_manifests/lineage-ice.xml`
 
-I reviewed the reference maintainer's Realme ice tree and kernel history. Their [YAAP bring-up commit](https://github.com/Debarpan102/android_device_realme_ice/commit/52892ace44eaf7995f4c6add691b6babebc676c5) selects `yaap_ice`, inherits YAAP product config and switches the overlay path to `overlay-yaap`. Their [common-kernel switch](https://github.com/Debarpan102/android_device_realme_ice/commit/45e25bac0e0ef1a05b701e178a627ebb4bd75f05) replaces the standalone RMX3461 kernel source with the common-kernel setup while retaining `TARGET_KERNEL_CONFIG += vendor/oplus_yupik_QGKI.config`. The fragment was introduced explicitly for Yupik devices and Realme Q3s touchpanel support in [this kernel commit](https://github.com/Debarpan102/kernel_oneplus_sm8350/commit/ad3dcbc0c7090cc56ae962eef0374b6554bde31f); a later commit adds the OPlus/ST21 NFC drivers [here](https://github.com/Debarpan102/kernel_oneplus_sm8350/commit/bb7a3d6e5f93354d09f174d0bf9ad35ed7d56eb2).
+## Checks completed
 
-Based on that concrete reference, the device fragment **must retain `CONFIG_ARCH_YUPIK=y`** alongside its NFC, Ilitek touchpanel, and Wi-Fi options; I restored it in the `nightx24/kernel_oneplus_sm8350` branch. Do not interpret the two config files as a choice between Lahaina and Yupik: this reference port intentionally uses the Lahaina base defconfig plus the Yupik device fragment. The GitHub Actions kernel-config job now runs the actual Kconfig merge and `olddefconfig`, and verifies the expected Lahaina/Yupik, NFC, Ilitek touchpanel, and QCA6750 symbols in the resolved `.config`. This validates configuration resolution only; it does not compile a kernel image.
+The [LineageOS 24.0 Android 17 preflight workflow](https://github.com/nightx24/android_device_realme_ice/actions/runs/39897772976) completed successfully on 2026-10-23. Its checks verified that expected remote branches exist, the product selection and local manifest are present, referenced device-local files exist, and device XML resources parse. It does not sync/build the complete Android source tree.
 
-The reference repository has a `YAAP Initial Bringup` commit, but its device repository currently exposes no GitHub Actions workflow runs or releases through the public API. The commit history is useful implementation evidence, but it does not by itself prove a particular commit produced a bootable image or identify which exact ROM build was tested.
+The current `device.mk` inherits `device/oneplus/sm8350-common/common.mk` and `vendor/realme/ice/ice-vendor.mk`. The product file `lineage_ice.mk` inherits the device configuration and LineageOS `common_full_phone.mk`, and identifies the product as `lineage_ice` / device `ice` / model `RMX3461`.
 
-## Confirmed from source
+The tree uses the SM8350 common board configuration and appends `vendor/oplus_yupik_QGKI.config` to the kernel config. The common platform config and Yupik fragment must be treated together; do not replace the device fragment with a generic Lahaina config without checking the required NFC, touchscreen and Wi-Fi options.
 
-- **Local manifest branch mismatch fixed:** the device project now syncs `refs/heads/ice-17`, matching the active port branch. Previously it requested `refs/heads/seventeen`, which could silently sync a different revision despite building from the `ice-17` branch in the preflight checkout. The workflow now checks the active branch and validates this manifest revision.
+## Important difference found against the LineageOS 23 reference
 
-- DerpFest manifest branch `17` has a `snippets/derp.xml` manifest that maps `vendor/lineage` to the `android_vendor_derpfest` project.
-- In that vendor tree, `config/common_mobile_full.mk` inherits `vendor/lineage/config/common_mobile.mk`; `config/telephony.mk` exists. The current `derp_ice.mk` inheritance paths therefore match the inspected DerpFest source layout.
-- The device tree's `device.mk` inherits `device/oneplus/sm8350-common/common.mk` and `vendor/realme/ice/ice-vendor.mk`.
-- The common device tree's `common.mk` also inherits `vendor/oneplus/sm8350-common/sm8350-common-vendor.mk`, and `BoardConfigCommon.mk` includes the matching vendor BoardConfig. The local manifest includes `Debarpan102/proprietary_vendor_oneplus_sm8350-common` on branch `seventeen`.
-- The kernel fork contains `arch/arm64/configs/vendor/oplus_yupik_QGKI.config` with `CONFIG_ARCH_YUPIK=y` plus device-specific NFC/touchpanel/Wi-Fi settings, and `vendor/lahaina-qgki_defconfig` with `CONFIG_ARCH_LAHAINA=y`. The Yupik setting was restored to match the reference tree. The `nightx24` fork has local commits not present in Debarpan’s branch; review diffs before syncing either direction. The local manifest continues to use the `nightx24` fork.
-- The proprietary vendor repository has an `ice-vendor.mk` on branch `seventeen`.
+The reference tree's `BoardConfig.mk` defines the Soong namespace `OPLUS_LINEAGE_TOUCH_HAL` and points its include directory at `device/realme/ice/touch/include`. The current `lineage-24.0` branch does **not** contain that `touch/include` directory, so copying those three BoardConfig lines verbatim would point Soong at a missing path. This is a concrete porting gap to resolve: inspect the reference tree's touch headers and their consumers, then port the required files only if compatible with the current `hardware/oplus` and SM8350 common tree. Until then, do not claim touch HAL compatibility from the reference config alone.
 
-## Other findings requiring work before a real build
+The current product intentionally does not inherit `overlay-yaap`. It must not be re-enabled just because the resources exist; first check the overlay resource names and values against the LineageOS 24 source and port only compatible resources.
 
-1. **Overlay inspection:** the `overlay-yaap` folder contains three resource overlays: SystemUI burn-in protection, Settings face-enrollment configuration, and Aperture auxiliary-camera/video configurations. These resources look like device configuration rather than obviously YAAP-only product code. Keep them for now; validate the resource names and behavior against DerpFest Android 17 before renaming or changing paths.
-2. **Android 17 compatibility is unproven.** Branch names do not prove Soong, SELinux, VINTF, HAL, kernel, or vendor compatibility.
-3. **VINTF and HAL compatibility are not fully verified.** Check device and ODM manifests, framework compatibility matrices, vendor HAL versions, init rc files, and SELinux policy against the DerpFest 17 base.
-4. **Proprietary source paths:** a static comparison of `ice-vendor.mk` against the proprietary vendor repository tree found all 617 unique `PRODUCT_COPY_FILES` source paths in the manifest. This confirms source-path presence in Git, not that every destination is correct or that blobs work on Android 17.
-5. **Device-local paths:** the audio XMLs, media profiles, display config XML, and `init.oplus_ice.rc` referenced in `device.mk` exist in the device tree.
-6. **Product identity needs device-side validation.** `derp_ice.mk` sets product/device/brand/model and GMS client ID, but the model and release identity must be checked against a verified stock build for this exact device.
-7. **Duplicate copy entry fixed:** removed the second identical `media/media_profiles_vendor.xml` mapping from `device.mk`; the original source/destination mapping remains.
+## Remaining pre-build audit
 
-## Next safe engineering milestone
+1. Port or deliberately replace the missing touch HAL include configuration after checking the reference headers and current OPlus HAL build files.
+2. Audit `BoardConfig.mk`, kernel build variables, partition declarations, vendor makefiles, and the common tree against the selected LineageOS 24 source branch.
+3. Review device and common VINTF manifests/matrices, init scripts, and SELinux policy for Android 17 compatibility.
+4. Review OPlus resource packages listed in `device.mk`; ensure their module names exist in the synced `hardware/oplus` and that the selected branch provides the expected targets.
+5. Validate proprietary blob source/destination mappings and firmware/vendor compatibility. Presence of a source path in Git is not proof that a blob works at runtime.
+6. Complete a full source build, inspect the resulting images, and test boot/runtime behavior on the exact RMX3461 hardware before distributing anything.
 
-Next validate the retained NFC/touchpanel/Wi-Fi config options against the exact stock device kernel config and run the kernel's config merge to inspect the final `.config`. The inherited common tree is `sm8350`/Lahaina, and the kernel build config is `build.config.msm.lahaina`; this matches the owner-stated Lahaina target but does not prove the declared RMX3461 hardware identity or all driver selections. Then continue the VINTF, proprietary blob, overlay and SELinux audit before any full build. Do not label this port build-ready until a complete compile and hardware validation pass.
+## Safety and deliverable status
 
-## Safety
-
-This tree declares Realme RMX3461 codename `ice`. It is not the OnePlus 15R. Do not flash images built from this tree to a different device.
-
-8. **Wi-Fi driver/runtime naming requires device verification.** The Yupik kernel fragment enables `CONFIG_CNSS_QCA6750=y` and disables `CONFIG_CNSS_QCA6490`, while the inherited common `init/init.target.rc` writes to a `cnss-qca6490` sysfs path and attempts to load modules named `qca_cld3_qca6390`. These names may be intentional for a shared driver/module family, so do not change them based on names alone. Before a release build, compare the actual stock RMX3461 kernel config, module filenames, device sysfs paths, and the known-working YAAP port; otherwise Wi-Fi can fail even if Kconfig merging passes.
-
-9. **Common init scripts are cross-device scripts.** The common tree contains hardware paths and module-loading assumptions for several OPlus devices. Their presence in source does not prove every command is valid for RMX3461. Review boot logs on the known-working YAAP port and compare the exact device-specific init/vendor modules before declaring Android 17 compatibility.
+No full LineageOS Android 17 build or flashable ROM ZIP has been produced or verified. Do not flash the raw kernel `Image` as a ROM or boot image. Preserve the currently working YAAP installation until a complete, device-matched build and recovery path are available. Never flash images intended for RMX3461 to another device.
