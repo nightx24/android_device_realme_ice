@@ -1,96 +1,42 @@
-# Realme ice / DerpFest Android 17 build notes
+# Realme RMX3461 (ice) — LineageOS Android 17 port notes
 
-## Target
+## Target and current status
 
-- Device codename: `ice`
-- Model declared by this device tree: Realme RMX3461
-- Working branch in this repository: `ice-17`
-- Device-source branches: `seventeen`
-- ROM manifest: [DerpFest-AOSP/android_manifest, branch 17](https://github.com/DerpFest-AOSP/android_manifest/tree/17)
-- DerpFest vendor repository: [DerpFest-AOSP/android_vendor_derpfest, branch 17](https://github.com/DerpFest-AOSP/android_vendor_derpfest/tree/17)
-- Port review: [ANDROID17_PORT_AUDIT.md](ANDROID17_PORT_AUDIT.md)
+- Device: Realme 9 5G SE, model RMX3461, codename `ice`.
+- ROM source target: LineageOS `lineage-24.0` (Android 17 target).
+- Device tree: `nightx24/android_device_realme_ice`, branch `lineage-24.0`.
+- Product: `lineage_ice-userdebug`.
+- Reference device tree: `pjgowtham/android_device_realme_ice`, branch `lineage-23.0`.
 
-**Kernel config reference reviewed:** the established Realme ice YAAP tree also uses the Lahaina base defconfig and appends `vendor/oplus_yupik_QGKI.config`. The GitHub Actions kernel-config job now successfully merges the two configurations and checks the expected Lahaina/Yupik, NFC, Ilitek touchpanel, and QCA6750 symbols after `olddefconfig`. Keep `CONFIG_ARCH_YUPIK=y` and the device-specific settings in that fragment. See [the YAAP bring-up commit](https://github.com/Debarpan102/android_device_realme_ice/commit/52892ace44eaf7995f4c6add691b6babebc676c5), [the common-kernel switch](https://github.com/Debarpan102/android_device_realme_ice/commit/45e25bac0e0ef1a05b701e178a627ebb4bd75f05), and the [reference-port audit](ANDROID17_PORT_AUDIT.md). This is configuration validation, not kernel image or ROM compilation.
+This branch is currently **port preparation only**. Static GitHub Actions checks have passed, but there is no completed full Android source build, no verified boot/recovery image, and no flashable ROM ZIP. See [ANDROID17_PORT_AUDIT.md](ANDROID17_PORT_AUDIT.md) for the current findings and blockers.
 
-**Do not flash this build to a OnePlus 15R or any other model.** This device tree identifies Realme RMX3461 and has not been hardware-tested as part of this work.
+## Source setup (requires a suitably provisioned Linux build machine)
 
-## Changes on `ice-17`
+A full Android source sync and build commonly needs hundreds of GB of free storage, substantial RAM, and multiple CPU cores. A standard GitHub-hosted runner is generally not suitable for a full Android build. This repository's preflight workflow does not download or compile the full Android source tree.
 
-- Added `build/local_manifests/ice.xml` for the device, Realme vendor, SM8350 common device, SM8350 common proprietary vendor, OPlus hardware, and kernel repositories.
-- Added an initial `derp_ice.mk` product definition using the DerpFest Android 17 vendor configuration path.
-- Updated `AndroidProducts.mk` to expose `derp_ice-user`, `derp_ice-userdebug`, and `derp_ice-eng`.
-- Added a GitHub Actions preflight to check source branches, local-manifest XML, product metadata, DerpFest vendor config inheritance, VINTF XML, and kernel config fragment presence.
-- Added a source audit documenting the reference YAAP bring-up and its Lahaina-base-plus-Yupik-fragment kernel configuration.
-
-The product makefile is an **initial port, not a compile-tested configuration**.
-
-## Remaining blockers
-
-1. Compare the merged kernel `.config` against a verified stock RMX3461 config, if available, and eventually compile the kernel image.
-2. `device.mk` still includes `overlay-yaap`. Review its resources for YAAP-specific assumptions and Android 17 compatibility before deciding whether to retain, adapt, or remove them.
-3. Confirm the device and common trees are compatible with the exact DerpFest Android 17 manifest revisions.
-4. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF/HAL compatibility, partition sizes, module loading, and SELinux policy.
-5. After a full source sync, run actual Android product make/Soong checks and resolve any compile errors.
-6. No boot, recovery, OTA, or ROM image has been compiled or tested on hardware.
-
-## Source setup (on a suitably provisioned build runner)
-
-This project does not require a personal PC if you have access to a cloud runner with enough storage. A standard GitHub-hosted runner generally does **not** have enough free disk for a complete Android checkout and build; this repository's preflight does not attempt the full build.
-
-**Do not run a full build until the kernel configuration and remaining compatibility checks are resolved.** After that, on a runner with several hundred GB of available disk and sufficient RAM/CPU:
+From a clean workspace, initialize the LineageOS manifest and add this device's local manifest:
 
 ```bash
-repo init -u https://github.com/DerpFest-AOSP/android_manifest.git -b 17
+repo init -u https://github.com/LineageOS/android.git -b lineage-24.0
 mkdir -p .repo/local_manifests
-curl -fL https://raw.githubusercontent.com/nightx24/android_device_realme_ice/ice-17/build/local_manifests/ice.xml -o .repo/local_manifests/ice.xml
+curl -fL https://raw.githubusercontent.com/nightx24/android_device_realme_ice/lineage-24.0/build/local_manifests/lineage-ice.xml -o .repo/local_manifests/lineage-ice.xml
 repo sync -c -j2
+source build/envsetup.sh
+lunch lineage_ice-userdebug
+mka bacon
 ```
 
-The command downloads the tracked local manifest directly, so you do not need a prior device-tree checkout.
+Treat this as a build attempt, not a promise that the current port compiles. The local manifest pins the device tree to `lineage-24.0` and the current custom SM8350 common device, kernel, OPlus hardware, and proprietary vendor repositories to their `seventeen` branches. Verify all manifest projects resolve and review the compatibility audit before starting a costly build. The `mka bacon` step may fail until source-level issues are resolved.
 
-After sync, verify that the repo manifest resolves every project and that `derp_ice-userdebug` is listed by the build environment. A successful sync does not prove buildability.
+## Known checks and blockers
 
-## Build capacity and safety
+- The static preflight checks branch/file presence, product selection, manifest XML syntax, required local files, and selected Soong module declarations. It is not a compiler test.
+- The device tree uses the SM8350/Lahaina common configuration and adds `vendor/oplus_yupik_QGKI.config`. Keep the device-specific Yupik, touchscreen, NFC, and Wi-Fi configuration together unless a verified source/build test justifies a change.
+- The device tree sets `BOARD_SUPER_PARTITION_SIZE` to 10,200,547,328 bytes and `BOARD_ONEPLUS_DYNAMIC_PARTITIONS_SIZE` to 10,196,353,024 bytes (a 4 MiB difference). These match the reference device tree but have **not** been verified against the physical partition map of the user's installed firmware.
+- The selected custom common tree differs from official LineageOS `lineage-24.0` in reserved-size configuration, AVB flags, and security patch declaration. See the port audit; do not blindly copy settings or assume these differences are harmless.
+- VINTF XML exists, but `checkvintf` has not been run against a completed Android 17 build and the exact target vendor/ODM images.
+- Proprietary blob mappings, camera/audio/display behavior, init services, SELinux, and hardware runtime behavior still need full-build and device validation.
 
-A full Android source checkout and output commonly consume hundreds of GB. Ordinary GitHub-hosted runners are typically too small; larger hosted runners depend on account/org availability and configuration. Do not add access tokens, cloud credentials, or signing keys to the repository to work around resource limits.
+## Firmware and flashing safety
 
-Any generated image must be verified against the exact RMX3461 device, partition layout, bootloader state, and install procedure. Do not flash untested images.
-
-## Latest build milestone (2026-10-23)
-
-The GitHub Actions kernel-image job completed successfully on run [39893491998](https://github.com/nightx24/android_device_realme_ice/actions/runs/39893491998). It produced an arm64 kernel `Image` and a build log. The output is a raw kernel image only: it is not a `boot.img`, installer ZIP, OTA, or complete ROM.
-
-The common BoardConfig declares boot header version 3, a 4096-byte kernel page size, an A/B layout, and separate `boot`, `vendor_boot`, and `dtbo` partitions. Before constructing a flashable boot image, preserve the matching ramdisk and boot metadata from a verified RMX3461 build. Do not use a boot image from the user's separate OnePlus 15R or from an unrelated device.
-
-
-### Boot-image layout details checked against the shared BoardConfig
-
-| Setting | Source value |
-|---|---|
-| Boot header | v3 |
-| Kernel image name | `Image` |
-| Kernel page size | 4096 bytes |
-| DTBO | Separate image (`BOARD_KERNEL_SEPARATED_DTBO := true`) |
-| DTB in boot image | Enabled (`BOARD_INCLUDE_DTB_IN_BOOTIMG := true`) |
-| Boot image partition limit | 201,326,592 bytes |
-| Vendor boot partition limit | 201,326,592 bytes |
-| DTBO partition limit | 25,165,824 bytes |
-| Recovery resources | Moved to `vendor_boot` |
-
-These are build-tree declarations, not measurements of the installed phone's actual partitions. Verify them against the exact RMX3461 firmware images before packaging. The reference device-tree repository currently has no published GitHub Releases and no GitHub Actions run artifacts to retrieve as a known-good boot-image set. Therefore, do not substitute images from a different device or unrelated build.
-
-### Next packaging gate
-
-Obtain matching `boot.img`, `vendor_boot.img`, and `dtbo.img` from the known-working RMX3461 YAAP build or matching stock firmware, then inspect their headers and contents. Do not create or flash a boot image until the source image layout, ramdisk arrangement, command line, DTB/DTBO handling, and partition sizes are confirmed. A successful kernel compile does not establish hardware bootability.
-
-A full DerpFest Android 17 build is still outstanding. The standard GitHub-hosted runner used for kernel CI does not provide the storage capacity normally needed for a complete Android source checkout and build.
-
-### Firmware and boot-component investigation (2026-10-23)
-
-The target phone is unrooted, so normal Android apps cannot read the protected raw boot partitions. Do not attempt to write to or dump block devices through an unprivileged shell. The preferred no-root route is to obtain the exact RMX3461 stock firmware package (or a verified full OTA package) and extract its images in a controlled build environment. If it contains `payload.bin`, use a reputable payload extractor to inspect the image set and compare build fingerprints / firmware versions before using any component.
-
-Research found an archived AlphaDroid OTA index for RMX3461 that points to `AlphaDroid-20230316-RMX3461-vanilla-v1.2.1.zip` (Android 13-era, 2023). It is useful evidence that public RMX3461 ROM packages existed, but it is old and is **not approved as the source of boot components** for the currently installed YAAP build or this Android 17 port. Index: https://github.com/AlphaDroid-devices/OTA/blob/main/RMX3461.json .
-
-Research also found a public RMX3461 TWRP device tree with `prebuilt/dtbo.img` and a prebuilt kernel, but no matching `boot.img` + `vendor_boot.img` set was identified. A recovery-tree prebuilt DTBO alone does not establish matching firmware version, boot ramdisk, vendor boot modules, or AVB metadata, so it must not be treated as a complete or verified boot-image set: https://github.com/realme9se-trees/twrp_device_realme_RMX3461/tree/main/prebuilt .
-
-**Current result:** no verified, version-matched stock firmware URL or complete boot-component set has been established yet. Continue searching for an official Realme RMX3461 package or a known-working YAAP release. Do not flash the raw kernel image or combine it with unverified boot components.
+Do not flash anything from this branch yet. Preserve the currently working ROM and recovery path. A raw kernel `Image` is not a `boot.img`, recovery image, OTA, or ROM ZIP. Before any flashable package is assembled, verify the exact RMX3461 firmware build, physical partition sizes, matching boot/vendor_boot/dtbo components, AVB requirements, and installation/recovery procedure. Do not use images from another model or infer physical partition sizes from BoardConfig alone.
