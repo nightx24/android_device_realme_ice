@@ -1,0 +1,92 @@
+name: Build RMX3461 kernel image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ice-17]
+    paths:
+      - ".github/workflows/kernel-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  kernel-image:
+    name: Compile arm64 Image (Lahaina + Yupik)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out kernel source
+        uses: actions/checkout@v4
+        with:
+          repository: nightx24/kernel_oneplus_sm8350
+          ref: seventeen
+          path: kernel/oneplus/sm8350
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex clang lld llvm libssl-dev libelf-dev python3 dwarves cpio rsync
+
+      - name: Check runner disk and toolchain
+        run: |
+          df -h
+          clang --version
+          test -f kernel/oneplus/sm8350/arch/arm64/configs/vendor/lahaina-qgki_defconfig
+          test -f kernel/oneplus/sm8350/arch/arm64/configs/vendor/oplus_yupik_QGKI.config
+
+      - name: Configure Lahaina and merge Yupik fragment
+        working-directory: kernel/oneplus/sm8350
+        run: |
+          set -euo pipefail
+          make ARCH=arm64 LLVM=1 vendor/lahaina-qgki_defconfig
+          scripts/kconfig/merge_config.sh -m -r .config arch/arm64/configs/vendor/oplus_yupik_QGKI.config
+          make ARCH=arm64 LLVM=1 olddefconfig
+          grep -q '^CONFIG_ARCH_LAHAINA=y$' .config
+          grep -q '^CONFIG_ARCH_YUPIK=y$' .config
+          grep -q '^CONFIG_CNSS_QCA6750=y$' .config
+
+      - name: Compile kernel Image
+        working-directory: kernel/oneplus/sm8350
+        env:
+          ARCH: arm64
+          LLVM: "1"
+          LLVM_IAS: "1"
+        run: |
+          set -o pipefail
+          make -j2 ARCH=arm64 LLVM=1 LLVM_IAS=1 Image 2>&1 | tee kernel-build.log
+
+      - name: Verify output
+        if: success()
+        working-directory: kernel/oneplus/sm8350
+        run: |
+          test -s arch/arm64/boot/Image
+          file arch/arm64/boot/Image
+          sha256sum arch/arm64/boot/Image | tee kernel-image.sha256
+          cp arch/arm64/boot/Image "$GITHUB_WORKSPACE/Image"
+          cp kernel-build.log "$GITHUB_WORKSPACE/kernel-build.log"
+          cp kernel-image.sha256 "$GITHUB_WORKSPACE/kernel-image.sha256"
+
+      - name: Upload kernel build outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rmx3461-ice-kernel-image
+          path: |
+            Image
+            kernel-build.log
+            kernel-image.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Summarize scope
+        if: always()
+        run: |
+          {
+            echo "## RMX3461 kernel image build"
+            echo
+            echo "- This job attempts an actual arm64 kernel Image compilation using the hosted runner's LLVM toolchain."
+            echo "- A successful Image is not a flashable boot.img or a complete DerpFest ROM."
+            echo "- If compilation fails, inspect the compiler log and use the kernel's intended Android Clang toolchain before claiming success."
+          } >> "$GITHUB_STEP_SUMMARY"
