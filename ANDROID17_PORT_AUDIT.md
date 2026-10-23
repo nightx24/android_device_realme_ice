@@ -40,3 +40,7 @@ Next validate the retained NFC/touchpanel/Wi-Fi config options against the exact
 ## Safety
 
 This tree declares Realme RMX3461 codename `ice`. It is not the OnePlus 15R. Do not flash images built from this tree to a different device.
+
+8. **Wi-Fi driver/runtime naming requires device verification.** The Yupik kernel fragment enables `CONFIG_CNSS_QCA6750=y` and disables `CONFIG_CNSS_QCA6490`, while the inherited common `init/init.target.rc` writes to a `cnss-qca6490` sysfs path and attempts to load modules named `qca_cld3_qca6390`. These names may be intentional for a shared driver/module family, so do not change them based on names alone. Before a release build, compare the actual stock RMX3461 kernel config, module filenames, device sysfs paths, and the known-working YAAP port; otherwise Wi-Fi can fail even if Kconfig merging passes.
+
+9. **Common init scripts are cross-device scripts.** The common tree contains hardware paths and module-loading assumptions for several OPlus devices. Their presence in source does not prove every command is valid for RMX3461. Review boot logs on the known-working YAAP port and compare the exact device-specific init/vendor modules before declaring Android 17 compatibility.
