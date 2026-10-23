@@ -10,7 +10,7 @@
 - DerpFest vendor repository: [DerpFest-AOSP/android_vendor_derpfest, branch 17](https://github.com/DerpFest-AOSP/android_vendor_derpfest/tree/17)
 - Port review: [ANDROID17_PORT_AUDIT.md](ANDROID17_PORT_AUDIT.md)
 
-**Kernel config reference reviewed:** the established Realme ice YAAP tree also uses the Lahaina base defconfig and appends `vendor/oplus_yupik_QGKI.config`. Keep `CONFIG_ARCH_YUPIK=y` and the device NFC, Ilitek touchpanel, and Wi-Fi settings in that fragment. See [the YAAP bring-up commit](https://github.com/Debarpan102/android_device_realme_ice/commit/52892ace44eaf7995f4c6add691b6babebc676c5), [the common-kernel switch](https://github.com/Debarpan102/android_device_realme_ice/commit/45e25bac0e0ef1a05b701e178a627ebb4bd75f05), and the [reference-port audit](ANDROID17_PORT_AUDIT.md). The combination is source-grounded but still needs a real Kconfig merge and full build validation.
+**Kernel config reference reviewed:** the established Realme ice YAAP tree also uses the Lahaina base defconfig and appends `vendor/oplus_yupik_QGKI.config`. The GitHub Actions kernel-config job now successfully merges the two configurations and checks the expected Lahaina/Yupik, NFC, Ilitek touchpanel, and QCA6750 symbols after `olddefconfig`. Keep `CONFIG_ARCH_YUPIK=y` and the device-specific settings in that fragment. See [the YAAP bring-up commit](https://github.com/Debarpan102/android_device_realme_ice/commit/52892ace44eaf7995f4c6add691b6babebc676c5), [the common-kernel switch](https://github.com/Debarpan102/android_device_realme_ice/commit/45e25bac0e0ef1a05b701e178a627ebb4bd75f05), and the [reference-port audit](ANDROID17_PORT_AUDIT.md). This is configuration validation, not kernel image or ROM compilation.
 
 **Do not flash this build to a OnePlus 15R or any other model.** This device tree identifies Realme RMX3461 and has not been hardware-tested as part of this work.
 
@@ -26,11 +26,11 @@ The product makefile is an **initial port, not a compile-tested configuration**.
 
 ## Remaining blockers
 
-1. Run the actual kernel Kconfig merge for the Lahaina base plus the Yupik device fragment, inspect the final `.config`, and verify required device drivers remain enabled.
+1. Compare the merged kernel `.config` against a verified stock RMX3461 config, if available, and eventually compile the kernel image.
 2. `device.mk` still includes `overlay-yaap`. Review its resources for YAAP-specific assumptions and Android 17 compatibility before deciding whether to retain, adapt, or remove them.
 3. Confirm the device and common trees are compatible with the exact DerpFest Android 17 manifest revisions.
-4. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF, partition sizes, kernel configuration, module loading, and SELinux policy.
-5. Resolve all product copy-file sources and check all referenced overlays/configs after the source tree is synced.
+4. Validate proprietary vendor blobs, camera/audio/display dependencies, VINTF/HAL compatibility, partition sizes, module loading, and SELinux policy.
+5. After a full source sync, run actual Android product make/Soong checks and resolve any compile errors.
 6. No boot, recovery, OTA, or ROM image has been compiled or tested on hardware.
 
 ## Source setup (on a suitably provisioned build runner)
