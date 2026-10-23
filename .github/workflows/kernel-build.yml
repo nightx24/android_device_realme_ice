@@ -1,4 +1,4 @@
-name: Build RMX3461 kernel image
+name: Build RMX3461 kernel image (LineageOS Android 17 validation)
 
 on:
   workflow_dispatch:
