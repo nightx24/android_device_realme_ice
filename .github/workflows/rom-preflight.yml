@@ -153,6 +153,74 @@ jobs:
           fi
           echo "Product and manifest static checks passed."
 
+
+  kernel-config:
+    name: Merge Lahaina and Yupik kernel Kconfig
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out kernel source
+        uses: actions/checkout@v4
+        with:
+          repository: nightx24/kernel_oneplus_sm8350
+          ref: seventeen
+          path: kernel/oneplus/sm8350
+          fetch-depth: 1
+
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison libssl-dev libelf-dev
+
+      - name: Generate Lahaina base configuration
+        working-directory: kernel/oneplus/sm8350
+        run: |
+          set -euo pipefail
+          make ARCH=arm64 vendor/lahaina-qgki_defconfig
+
+      - name: Merge Yupik device fragment and resolve Kconfig
+        working-directory: kernel/oneplus/sm8350
+        run: |
+          set -euo pipefail
+          scripts/kconfig/merge_config.sh -m -r .config arch/arm64/configs/vendor/oplus_yupik_QGKI.config
+          make ARCH=arm64 olddefconfig
+          for option in CONFIG_ARCH_LAHAINA=y CONFIG_ARCH_YUPIK=y CONFIG_OPLUS_NFC=y CONFIG_NFC_ST21_I2C=y CONFIG_TOUCHPANEL_ILITEK=y CONFIG_TOUCHPANEL_ILITEK_ILITEK7807S=y CONFIG_CNSS_QCA6750=y; do
+            grep -q "^$option$" .config || {
+              echo "::error::Merged kernel config is missing expected option: $option"
+              exit 1
+            }
+          done
+          if grep -q '^CONFIG_CNSS_QCA6490=y
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Ice 17 ROM preflight"
+            echo
+            echo "- Device branch: ice-17"
+            echo "- This workflow checks source presence and static configuration only."
+            echo "- It does not sync the Android source tree, compile a ROM/kernel, flash a device, or produce an OTA."
+            echo "- Reference review found the established ice port uses the Lahaina base defconfig plus the Yupik device fragment."
+            echo "- Final Kconfig merge, Android 17 compatibility, VINTF/HAL, proprietary blobs, overlays, partition layout and SELinux remain to be validated."
+            echo "- Standard GitHub-hosted runners generally lack sufficient disk for a full Android build."
+          } >> "$GITHUB_STEP_SUMMARY"
+ .config; then
+            echo "::error::Unexpected QCA6490 WLAN option enabled for the ice device fragment"
+            exit 1
+          fi
+          echo "Merged Kconfig contains the expected Lahaina base and Yupik device options."
+
+      - name: Summarize scope
+        if: always()
+        run: |
+          {
+            echo "## Kernel Kconfig validation"
+            echo
+            echo "- This job runs the kernel Kconfig tools on the actual kernel source."
+            echo "- It does not compile the kernel image or build the Android ROM."
+            echo "- A successful merge is necessary but not sufficient to prove device bootability."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Write preflight summary
         if: always()
         shell: bash
