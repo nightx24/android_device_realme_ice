@@ -44,7 +44,7 @@ jobs:
             echo "::endgroup::"
           }
 
-          check_branch "nightx24/android_device_realme_ice" "seventeen"
+          check_branch "nightx24/android_device_realme_ice" "ice-17"
           check_branch "nightx24/proprietary_vendor_realme_ice" "seventeen"
           check_branch "nightx24/android_device_oneplus_sm8350-common" "seventeen"
           check_branch "Debarpan102/proprietary_vendor_oneplus_sm8350-common" "seventeen"
