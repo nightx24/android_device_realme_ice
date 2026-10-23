@@ -72,3 +72,16 @@ These differences are recorded for review only; do not blindly copy upstream AVB
 ### Next gate
 
 Before building a flashable package, compare the actual RMX3461 firmware's partition map and build fingerprint with these declarations; resolve the custom-common-tree deltas deliberately; then run the Android build's VINTF compatibility checks against the exact framework and vendor/ODM inputs. Until those checks and a complete source build pass, this branch remains a port-preparation tree, not a flashable ROM.
+
+
+## Proprietary blob source audit (2026-10-23)
+
+I compared the device tree's proprietary-files.txt against the recursive Git tree of nightx24/proprietary_vendor_realme_ice at branch seventeen, and checked the generated ice-vendor.mk source references against that same tree.
+
+- proprietary-files.txt contains 944 non-comment entries.
+- All 944 listed source paths were present in the vendor repository under proprietary/.
+- ice-vendor.mk contains 617 proprietary source-copy references; all 617 referenced source paths were present in the vendor repository.
+- The vendor repository tree contained 1,021 entries and the GitHub tree response was not truncated.
+- The device blob list identifies its source firmware as Realme 9 5G SE RMX3461_13.1.0.100(EX01).
+
+This is a repository path/existence check only. It does not validate blob hashes against the user's installed firmware, ELF dependencies, service registrations, SELinux permissions, VINTF compatibility, or runtime operation on Android 17. The source firmware version and actual target vendor/ODM build fingerprint must still be confirmed before flashing.
