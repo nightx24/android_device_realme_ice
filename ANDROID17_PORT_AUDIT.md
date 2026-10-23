@@ -2,13 +2,15 @@
 
 Status: static source audit only. This is not a successful Android build and does not certify a bootable image.
 
-## Lahaina target and remaining kernel-fragment question
+## Reference-port review: Lahaina base plus Yupik device fragment
 
-The project owner has confirmed that **Lahaina is the intended platform**. Treat the inherited common tree's `TARGET_BOARD_PLATFORM := lahaina` and `vendor/lahaina-qgki_defconfig` as the intended base; do not switch the port to Yupik based only on the fragment name.
+The project uses the SM8350 common tree, whose `BoardConfigCommon.mk` sets `TARGET_BOARD_PLATFORM := lahaina` and `TARGET_KERNEL_CONFIG := vendor/lahaina-qgki_defconfig`. The device tree then appends `vendor/oplus_yupik_QGKI.config`.
 
-Kernel fragment adjustment made: `vendor/oplus_yupik_QGKI.config` no longer sets `CONFIG_ARCH_YUPIK=y`; the Lahaina base defconfig remains responsible for `CONFIG_ARCH_LAHAINA=y`. The fragment still retains its NFC, Ilitek touchpanel, and Wi-Fi settings. Comparing the project kernel fork with the reference [`Debarpan102/kernel_oneplus_sm8350`](https://github.com/Debarpan102/kernel_oneplus_sm8350/tree/seventeen) confirms the `nightx24` `seventeen` branch is one commit ahead, and the only branch difference is this fragment edit. That is why the local manifest should continue using the `nightx24` fork for now rather than switching to the reference branch, which still contains `CONFIG_ARCH_YUPIK=y`. This removes the direct architecture-symbol conflict, but the remaining driver selections and final merged `.config` still need a real kernel configuration run and device-source validation.
+I reviewed the reference maintainer's Realme ice tree and kernel history. Their [YAAP bring-up commit](https://github.com/Debarpan102/android_device_realme_ice/commit/52892ace44eaf7995f4c6add691b6babebc676c5) selects `yaap_ice`, inherits YAAP product config and switches the overlay path to `overlay-yaap`. Their [common-kernel switch](https://github.com/Debarpan102/android_device_realme_ice/commit/45e25bac0e0ef1a05b701e178a627ebb4bd75f05) replaces the standalone RMX3461 kernel source with the common-kernel setup while retaining `TARGET_KERNEL_CONFIG += vendor/oplus_yupik_QGKI.config`. The fragment was introduced explicitly for Yupik devices and Realme Q3s touchpanel support in [this kernel commit](https://github.com/Debarpan102/kernel_oneplus_sm8350/commit/ad3dcbc0c7090cc56ae962eef0374b6554bde31f); a later commit adds the OPlus/ST21 NFC drivers [here](https://github.com/Debarpan102/kernel_oneplus_sm8350/commit/bb7a3d6e5f93354d09f174d0bf9ad35ed7d56eb2).
 
-This is a **kernel config consistency check**, not evidence that the Lahaina common tree itself is wrong. Confirm the final merged `.config` and verify that the device tree, vendor blobs, and kernel sources all match the intended hardware before building or flashing.
+Based on that concrete reference, the device fragment **must retain `CONFIG_ARCH_YUPIK=y`** alongside its NFC, Ilitek touchpanel, and Wi-Fi options; I restored it in the `nightx24/kernel_oneplus_sm8350` branch. Do not interpret the two config files as a choice between Lahaina and Yupik: this reference port intentionally uses the Lahaina base defconfig plus the Yupik device fragment. A real kernel config merge is still required to establish whether all final symbols resolve correctly.
+
+The reference repository has a `YAAP Initial Bringup` commit, but its device repository currently exposes no GitHub Actions workflow runs or releases through the public API. The commit history is useful implementation evidence, but it does not by itself prove a particular commit produced a bootable image or identify which exact ROM build was tested.
 
 ## Confirmed from source
 
