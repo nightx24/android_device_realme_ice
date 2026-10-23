@@ -55,7 +55,7 @@ jobs:
           LLVM_IAS: "1"
         run: |
           set -o pipefail
-          make -j2 ARCH=arm64 LLVM=1 LLVM_IAS=1 KCFLAGS="-I$(pwd)/kernel/sched/walt" Image 2>&1 | tee kernel-build.log
+          make -j2 ARCH=arm64 LLVM=1 LLVM_IAS=1 Image 2>&1 | tee kernel-build.log
 
       - name: Verify output
         if: success()
