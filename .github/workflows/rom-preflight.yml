@@ -14,6 +14,10 @@ on:
       - "build/local_manifests/ice.xml"
       - "BUILDING.md"
       - "ANDROID17_PORT_AUDIT.md"
+      - "overlay/**"
+      - "overlay-yaap/**"
+      - "vintf/**"
+      - "init/**"
 
 permissions:
   contents: read
@@ -128,6 +132,36 @@ jobs:
           fi
           test "$(grep -c 'media_profiles_vendor.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml' device.mk)" -le 1
           echo "Product and manifest static checks passed."
+
+      - name: Parse all device XML resources and overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          import xml.etree.ElementTree as ET
+
+          roots = [pathlib.Path("overlay"), pathlib.Path("overlay-yaap"), pathlib.Path("vintf"), pathlib.Path("init")]
+          files = sorted({p for root in roots if root.exists() for p in root.rglob("*.xml") if p.is_file()})
+          if not files:
+              raise SystemExit("No XML files found in device overlay/VINTF/init paths")
+          errors = []
+          for path in files:
+              try:
+                  ET.parse(path)
+                  print(f"XML OK: {path}")
+              except ET.ParseError as exc:
+                  errors.append(f"{path}: {exc}")
+          for path in sorted(pathlib.Path(".").glob("*.xml")):
+              try:
+                  ET.parse(path)
+                  print(f"XML OK: {path}")
+              except ET.ParseError as exc:
+                  errors.append(f"{path}: {exc}")
+          if errors:
+              raise SystemExit("\\n".join(errors))
+          print(f"Parsed {len(files)} XML files under overlay/VINTF/init directories.")
+          PY
 
       - name: Write preflight summary
         if: always()
