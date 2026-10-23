@@ -55,3 +55,16 @@ After sync, verify that the repo manifest resolves every project and that `derp_
 A full Android source checkout and output commonly consume hundreds of GB. Ordinary GitHub-hosted runners are typically too small; larger hosted runners depend on account/org availability and configuration. Do not add access tokens, cloud credentials, or signing keys to the repository to work around resource limits.
 
 Any generated image must be verified against the exact RMX3461 device, partition layout, bootloader state, and install procedure. Do not flash untested images.
+
+## Latest build milestone (2026-10-23)
+
+The GitHub Actions kernel-image job completed successfully on run [39893491998](https://github.com/nightx24/android_device_realme_ice/actions/runs/39893491998). It produced an arm64 kernel `Image` and a build log. The output is a raw kernel image only: it is not a `boot.img`, installer ZIP, OTA, or complete ROM.
+
+The common BoardConfig declares boot header version 3, a 4096-byte kernel page size, an A/B layout, and separate `boot`, `vendor_boot`, and `dtbo` partitions. Before constructing a flashable boot image, preserve the matching ramdisk and boot metadata from a verified RMX3461 build. Do not use a boot image from the user's separate OnePlus 15R or from an unrelated device.
+
+### Next packaging gate
+
+Obtain matching `boot.img`, `vendor_boot.img`, and `dtbo.img` from the known-working RMX3461 YAAP build or matching stock firmware, then inspect their headers and contents. Do not create or flash a boot image until the source image layout, ramdisk arrangement, command line, DTB/DTBO handling, and partition sizes are confirmed. A successful kernel compile does not establish hardware bootability.
+
+A full DerpFest Android 17 build is still outstanding. The standard GitHub-hosted runner used for kernel CI does not provide the storage capacity normally needed for a complete Android source checkout and build.
+
