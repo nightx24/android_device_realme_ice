@@ -65,23 +65,14 @@ jobs:
           kernel="https://raw.githubusercontent.com/nightx24/kernel_oneplus_sm8350/seventeen/arch/arm64/configs/vendor"
           curl -fsSL "$kernel/lahaina-qgki_defconfig" -o /tmp/lahaina-qgki_defconfig
           curl -fsSL "$kernel/oplus_yupik_QGKI.config" -o /tmp/oplus_yupik_QGKI.config
-          grep -q '^CONFIG_ARCH_LAHAINA=y$' /tmp/lahaina-qgki_defconfig || {
-            echo "::error::Lahaina base defconfig is missing CONFIG_ARCH_LAHAINA=y"
-            exit 1
-          }
-          grep -q '^CONFIG_ARCH_YUPIK=y$' /tmp/oplus_yupik_QGKI.config || {
-            echo "::error::Realme ice device fragment is missing CONFIG_ARCH_YUPIK=y"
-            exit 1
-          }
+          grep -q '^CONFIG_ARCH_LAHAINA=y$' /tmp/lahaina-qgki_defconfig
+          grep -q '^CONFIG_ARCH_YUPIK=y$' /tmp/oplus_yupik_QGKI.config
           for option in CONFIG_OPLUS_NFC=y CONFIG_NFC_ST21_I2C=y CONFIG_TOUCHPANEL_ILITEK=y CONFIG_TOUCHPANEL_ILITEK_ILITEK7807S=y CONFIG_CNSS_QCA6750=y; do
-            grep -q "^$option$" /tmp/oplus_yupik_QGKI.config || {
-              echo "::error::Device kernel fragment is missing expected option: $option"
-              exit 1
-            }
+            grep -q "^$option$" /tmp/oplus_yupik_QGKI.config || { echo "::error::Missing expected option: $option"; exit 1; }
           done
           grep -q '^CONFIG_CNSS_QCA6490=n$' /tmp/oplus_yupik_QGKI.config
-          echo "Found Lahaina base plus the device-specific Yupik/NFC/touch/Wi-Fi fragment, matching the reference ice tree."
-          echo "::warning::This static check does not run Kconfig or prove the final merged kernel .config is valid."
+          echo "Static Lahaina/Yupik config checks passed."
+          echo "::warning::Static checks do not prove the merged kernel config is valid."
 
       - name: Parse device and common VINTF XML
         shell: bash
@@ -92,11 +83,7 @@ jobs:
           curl -fsSL "https://raw.githubusercontent.com/nightx24/android_device_oneplus_sm8350-common/seventeen/vintf/manifest_odm.xml" -o /tmp/sm8350-manifest_odm.xml
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
-          for path in (
-              "/tmp/ice-compatibility_matrix.xml",
-              "/tmp/sm8350-manifest.xml",
-              "/tmp/sm8350-manifest_odm.xml",
-          ):
+          for path in ("/tmp/ice-compatibility_matrix.xml", "/tmp/sm8350-manifest.xml", "/tmp/sm8350-manifest_odm.xml"):
               root = ET.parse(path).getroot()
               print(f"XML OK: {path} <{root.tag}>")
           PY
@@ -107,7 +94,6 @@ jobs:
           set -euo pipefail
           curl -fsSL "https://raw.githubusercontent.com/Debarpan102/proprietary_vendor_oneplus_sm8350-common/seventeen/sm8350-common-vendor.mk" -o /tmp/sm8350-common-vendor.mk
           grep -q 'PRODUCT_SOONG_NAMESPACES' /tmp/sm8350-common-vendor.mk
-          echo "FOUND: SM8350 common proprietary vendor makefile."
 
       - name: Validate local manifest and product configuration
         shell: bash
@@ -118,17 +104,10 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse("build/local_manifests/ice.xml").getroot()
           projects = {p.attrib.get("path"): p.attrib for p in root.findall("project")}
-          expected = {
-              "device/realme/ice",
-              "vendor/realme/ice",
-              "device/oneplus/sm8350-common",
-              "vendor/oneplus/sm8350-common",
-              "hardware/oplus",
-              "kernel/oneplus/sm8350",
-          }
+          expected = {"device/realme/ice", "vendor/realme/ice", "device/oneplus/sm8350-common", "vendor/oneplus/sm8350-common", "hardware/oplus", "kernel/oneplus/sm8350"}
           missing = expected - projects.keys()
           if missing:
-              raise SystemExit("Missing local manifest project paths: " + ", ".join(sorted(missing)))
+              raise SystemExit("Missing local manifest paths: " + ", ".join(sorted(missing)))
           if projects["device/realme/ice"].get("revision") != "refs/heads/ice-17":
               raise SystemExit("device/realme/ice must sync refs/heads/ice-17")
           for path in sorted(expected):
@@ -144,15 +123,24 @@ jobs:
           grep -q 'PRODUCT_MODEL := RMX3461' derp_ice.mk
           grep -q 'vendor/lineage/config/common_mobile_full.mk' derp_ice.mk
           if grep -q 'yaap_ice' AndroidProducts.mk; then
-            echo "::error::AndroidProducts.mk must select the DerpFest product, not the old YAAP product"
+            echo "::error::AndroidProducts.mk must select DerpFest, not YAAP"
             exit 1
           fi
-          if [ "$(grep -c 'media_profiles_vendor.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml' device.mk)" -gt 1 ]; then
-            echo "::error::Duplicate media_profiles_vendor.xml copy entry found"
-            exit 1
-          fi
+          test "$(grep -c 'media_profiles_vendor.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml' device.mk)" -le 1
           echo "Product and manifest static checks passed."
 
+      - name: Write preflight summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Ice 17 ROM preflight"
+            echo
+            echo "- Checks source presence and static configuration only."
+            echo "- Does not sync Android source, compile ROM/kernel, flash a device, or produce OTA."
+            echo "- Final Android 17 compatibility, HAL, proprietary blobs, overlays, partition layout and SELinux remain to be validated."
+            echo "- Standard GitHub-hosted runners generally lack sufficient disk for a full Android build."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   kernel-config:
     name: Merge Lahaina and Yupik kernel Kconfig
@@ -174,9 +162,7 @@ jobs:
 
       - name: Generate Lahaina base configuration
         working-directory: kernel/oneplus/sm8350
-        run: |
-          set -euo pipefail
-          make ARCH=arm64 vendor/lahaina-qgki_defconfig
+        run: make ARCH=arm64 vendor/lahaina-qgki_defconfig
 
       - name: Merge Yupik device fragment and resolve Kconfig
         working-directory: kernel/oneplus/sm8350
@@ -185,30 +171,13 @@ jobs:
           scripts/kconfig/merge_config.sh -m -r .config arch/arm64/configs/vendor/oplus_yupik_QGKI.config
           make ARCH=arm64 olddefconfig
           for option in CONFIG_ARCH_LAHAINA=y CONFIG_ARCH_YUPIK=y CONFIG_OPLUS_NFC=y CONFIG_NFC_ST21_I2C=y CONFIG_TOUCHPANEL_ILITEK=y CONFIG_TOUCHPANEL_ILITEK_ILITEK7807S=y CONFIG_CNSS_QCA6750=y; do
-            grep -q "^$option$" .config || {
-              echo "::error::Merged kernel config is missing expected option: $option"
-              exit 1
-            }
+            grep -q "^$option$" .config || { echo "::error::Merged config missing $option"; exit 1; }
           done
-          if grep -q '^CONFIG_CNSS_QCA6490=y
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## Ice 17 ROM preflight"
-            echo
-            echo "- Device branch: ice-17"
-            echo "- This workflow checks source presence and static configuration only."
-            echo "- It does not sync the Android source tree, compile a ROM/kernel, flash a device, or produce an OTA."
-            echo "- Reference review found the established ice port uses the Lahaina base defconfig plus the Yupik device fragment."
-            echo "- Final Kconfig merge, Android 17 compatibility, VINTF/HAL, proprietary blobs, overlays, partition layout and SELinux remain to be validated."
-            echo "- Standard GitHub-hosted runners generally lack sufficient disk for a full Android build."
-          } >> "$GITHUB_STEP_SUMMARY"
- .config; then
-            echo "::error::Unexpected QCA6490 WLAN option enabled for the ice device fragment"
+          if grep -q '^CONFIG_CNSS_QCA6490=y$' .config; then
+            echo "::error::Unexpected QCA6490 WLAN option enabled"
             exit 1
           fi
-          echo "Merged Kconfig contains the expected Lahaina base and Yupik device options."
+          echo "Merged Kconfig contains expected Lahaina and Yupik options."
 
       - name: Summarize scope
         if: always()
@@ -216,22 +185,7 @@ jobs:
           {
             echo "## Kernel Kconfig validation"
             echo
-            echo "- This job runs the kernel Kconfig tools on the actual kernel source."
-            echo "- It does not compile the kernel image or build the Android ROM."
-            echo "- A successful merge is necessary but not sufficient to prove device bootability."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Write preflight summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## Ice 17 ROM preflight"
-            echo
-            echo "- Device branch: ice-17"
-            echo "- This workflow checks source presence and static configuration only."
-            echo "- It does not sync the Android source tree, compile a ROM/kernel, flash a device, or produce an OTA."
-            echo "- Reference review found the established ice port uses the Lahaina base defconfig plus the Yupik device fragment."
-            echo "- Final Kconfig merge, Android 17 compatibility, VINTF/HAL, proprietary blobs, overlays, partition layout and SELinux remain to be validated."
-            echo "- Standard GitHub-hosted runners generally lack sufficient disk for a full Android build."
+            echo "- Runs kernel Kconfig tools on the actual kernel source."
+            echo "- Does not compile the kernel image or build the Android ROM."
+            echo "- Passing is necessary but not sufficient to prove bootability."
           } >> "$GITHUB_STEP_SUMMARY"
