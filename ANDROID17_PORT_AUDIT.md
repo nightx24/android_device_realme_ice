@@ -20,13 +20,13 @@ The tree uses the SM8350 common board configuration and appends `vendor/oplus_yu
 
 ## Important difference found against the LineageOS 23 reference
 
-The reference tree's `BoardConfig.mk` defines the Soong namespace `OPLUS_LINEAGE_TOUCH_HAL` and points its include directory at `device/realme/ice/touch/include`. The current `lineage-24.0` branch does **not** contain that `touch/include` directory, so copying those three BoardConfig lines verbatim would point Soong at a missing path. This is a concrete porting gap to resolve: inspect the reference tree's touch headers and their consumers, then port the required files only if compatible with the current `hardware/oplus` and SM8350 common tree. Until then, do not claim touch HAL compatibility from the reference config alone.
+The reference tree's `BoardConfig.mk` defines the Soong namespace `OPLUS_LINEAGE_TOUCH_HAL` and points its include directory at `device/realme/ice/touch/include`. The current `lineage-24.0` branch initially lacked that `touch/include` directory. I ported the reference `TouchscreenGestureConfig.h` and added the matching Soong namespace/include configuration to `BoardConfig.mk`. The preflight now checks that the header exists and the include path is declared. This is a source-level port of the LineageOS gesture list, not yet proof that the full Android 17 touch HAL compiles or that every gesture works on hardware.
 
 The current product intentionally does not inherit `overlay-yaap`. It must not be re-enabled just because the resources exist; first check the overlay resource names and values against the LineageOS 24 source and port only compatible resources.
 
 ## Remaining pre-build audit
 
-1. Port or deliberately replace the missing touch HAL include configuration after checking the reference headers and current OPlus HAL build files.
+1. Compile-test the newly ported touchscreen gesture header against the exact LineageOS 24 Touch HAL source and verify gesture behavior on device.
 2. Audit `BoardConfig.mk`, kernel build variables, partition declarations, vendor makefiles, and the common tree against the selected LineageOS 24 source branch.
 3. Review device and common VINTF manifests/matrices, init scripts, and SELinux policy for Android 17 compatibility.
 4. Review OPlus resource packages listed in `device.mk`; ensure their module names exist in the synced `hardware/oplus` and that the selected branch provides the expected targets.
