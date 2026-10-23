@@ -12,6 +12,8 @@ This is a **kernel config consistency check**, not evidence that the Lahaina com
 
 ## Confirmed from source
 
+- **Local manifest branch mismatch fixed:** the device project now syncs `refs/heads/ice-17`, matching the active port branch. Previously it requested `refs/heads/seventeen`, which could silently sync a different revision despite building from the `ice-17` branch in the preflight checkout. The workflow now checks the active branch and validates this manifest revision.
+
 - DerpFest manifest branch `17` has a `snippets/derp.xml` manifest that maps `vendor/lineage` to the `android_vendor_derpfest` project.
 - In that vendor tree, `config/common_mobile_full.mk` inherits `vendor/lineage/config/common_mobile.mk`; `config/telephony.mk` exists. The current `derp_ice.mk` inheritance paths therefore match the inspected DerpFest source layout.
 - The device tree's `device.mk` inherits `device/oneplus/sm8350-common/common.mk` and `vendor/realme/ice/ice-vendor.mk`.
@@ -31,7 +33,7 @@ This is a **kernel config consistency check**, not evidence that the Lahaina com
 
 ## Next safe engineering milestone
 
-First resolve the chipset/common-tree/kernel mismatch using verified stock device information and a genuinely matching common tree. Only then audit every `PRODUCT_COPY_FILES` source, overlays, VINTF, proprietary blobs and SELinux, run `lunch derp_ice-userdebug`, and attempt a full build on a runner with sufficient disk/RAM. Do not label this port build-ready until a complete compile and hardware validation pass.
+First resolve the chipset/common-tree/kernel mismatch using verified stock device information and a genuinely matching common tree. The inherited common tree is specifically `sm8350`/Lahaina, and its kernel build config is `build.config.msm.lahaina`; that is consistent with the owner-stated Lahaina target, but does not by itself prove the declared RMX3461 hardware identity or the Yupik device fragment is compatible. Only then audit every `PRODUCT_COPY_FILES` source, overlays, VINTF, proprietary blobs and SELinux, run `lunch derp_ice-userdebug`, and attempt a full build on a runner with sufficient disk/RAM. Do not label this port build-ready until a complete compile and hardware validation pass.
 
 ## Safety
 
