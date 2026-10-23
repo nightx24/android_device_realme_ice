@@ -147,6 +147,8 @@ jobs:
           missing = expected - projects.keys()
           if missing:
               raise SystemExit("Missing local manifest project paths: " + ", ".join(sorted(missing)))
+          if projects["device/realme/ice"].get("revision") != "refs/heads/ice-17":
+              raise SystemExit("device/realme/ice must sync from refs/heads/ice-17 (the active port branch)")
           for path in sorted(expected):
               print(f"OK: {path} -> {projects[path].get('name')} @ {projects[path].get('revision')}")
           PY
