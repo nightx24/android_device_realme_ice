@@ -163,6 +163,24 @@ jobs:
           print(f"Parsed {len(files)} XML files under overlay/VINTF/init directories.")
           PY
 
+      - name: Validate device-local PRODUCT_COPY_FILES sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          mk = pathlib.Path("device.mk").read_text()
+          sources = sorted(set(re.findall(r"\\$\\(LOCAL_PATH\\)/([^:\\s]+):", mk)))
+          if not sources:
+              raise SystemExit("No device-local PRODUCT_COPY_FILES sources were found")
+          missing = [p for p in sources if not (pathlib.Path(".") / p).is_file()]
+          for p in sources:
+              print(("MISSING: " if p in missing else "OK: ") + p)
+          if missing:
+              raise SystemExit(f"{len(missing)} device-local copy source(s) are missing")
+          print(f"All {len(sources)} unique device-local copy sources exist.")
+          PY
+
       - name: Write preflight summary
         if: always()
         shell: bash
