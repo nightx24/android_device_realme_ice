@@ -85,3 +85,23 @@ I compared the device tree's proprietary-files.txt against the recursive Git tre
 - The device blob list identifies its source firmware as Realme 9 5G SE RMX3461_13.1.0.100(EX01).
 
 This is a repository path/existence check only. It does not validate blob hashes against the user's installed firmware, ELF dependencies, service registrations, SELinux permissions, VINTF compatibility, or runtime operation on Android 17. The source firmware version and actual target vendor/ODM build fingerprint must still be confirmed before flashing.
+
+
+## Init and kernel-module integration audit (2026-10-23)
+
+### Device-specific init configuration
+
+- The device tree's init/Android.bp declares init.oplus_ice.rc as a device-specific prebuilt, and the source file exists.
+- init.oplus_ice.rc configures the OPlus OTG switch and sets USB/Bluetooth display names when ro.boot.prjname=21695. The property value and sysfs path have not been validated against the user's current firmware/runtime.
+- The device tree itself contains no top-level sepolicy directory or modules.load/modules.blocklist file in this branch's recursive Git tree. Policy and kernel-module loading therefore depend on inherited common/vendor/kernel configuration.
+
+### Common-tree init and module configuration
+
+- The custom SM8350 common tree contains 83 non-comment entries in modules.load and a blocklist for qca_cld3_wlan, with a comment that the target RC loads it after cold-boot calibration.
+- init/init.target.rc invokes vendor_modprobe.sh, modprobe, audio DSP modules, WLAN modules, and several vendor services. The common proprietary vendor repository contains vendor_modprobe.sh, pd-mapper, pm-service, and pm-proxy.
+- Several other init references (including lowirpcd, cnss_diag, fan_control, and modprobe) were not found as exact files in the checked common/device proprietary vendor trees. Some may be provided by the target firmware, Android source modules, symlinks, or alternate partitions; this path-only check cannot decide that. Treat them as dependencies requiring verification against the exact vendor/ODM images and final installed image contents, not as confirmed missing binaries.
+- The init script requests cdsprm as a modprobe target, but cdsprm is not in modules.load. This may be loaded by a separate RC or provided under a different module naming scheme; verify the final module set and boot logs before changing load order.
+
+### Compatibility limits and next gate
+
+This audit is static source inspection only. It does not compile init scripts, resolve SELinux denials, prove kernel modules match the kernel ABI, or validate that services start on hardware. Next, run a full Android build and inspect the generated vendor/odm images and boot logs for unresolved init imports, missing executables/modules, failed service starts, and SELinux denials. Do not remove service declarations or alter module loading based only on these repository searches.
