@@ -185,7 +185,25 @@ jobs:
           print(f"Device partition sizing OK: super={super_size}, dynamic group={group_size}, reserve={gap}")
           PY
           curl -fsSL "https://raw.githubusercontent.com/nightx24/android_device_oneplus_sm8350-common/seventeen/BoardConfigCommon.mk" -o /tmp/BoardConfigCommon.mk
-          grep -q '^AB_OTA_UPDATER := true
+          grep -Fq 'AB_OTA_UPDATER := true' /tmp/BoardConfigCommon.mk
+          grep -Fq 'BOARD_BOOT_HEADER_VERSION := 3' /tmp/BoardConfigCommon.mk
+          grep -Fq 'BOARD_SUPER_PARTITION_GROUPS := oneplus_dynamic_partitions' /tmp/BoardConfigCommon.mk
+          grep -Fq 'vendor_dlkm' /tmp/BoardConfigCommon.mk
+          echo "Common A/B, boot-header v3, dynamic-group and vendor_dlkm settings found."
+
+      - name: Write preflight summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Ice 17 ROM preflight"
+            echo
+            echo "- Checks source presence and static configuration only."
+            echo "- Does not sync Android source, compile ROM/kernel, flash a device, or produce OTA."
+            echo "- Final Android 17 compatibility, HAL, proprietary blobs, overlays, partition layout and SELinux remain to be validated."
+            echo "- Standard GitHub-hosted runners generally lack sufficient disk for a full Android build."
+          } >> "$GITHUB_STEP_SUMMARY"
+
         shell: bash
         run: |
           {
